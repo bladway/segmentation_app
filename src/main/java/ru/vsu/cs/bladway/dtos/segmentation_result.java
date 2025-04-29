@@ -11,5 +11,5 @@ public class segmentation_result {
     public Mat output_image;
     public Mat centers_labels;
     public int K;
-    public double epsilon;
+    public int iteration_count;
 }

@@ -82,7 +82,7 @@ public class math_util {
                     contours,
                     -1,
                     colors[i],
-                    4
+                    8
             );
         }
         return output_image;
@@ -183,10 +183,10 @@ public class math_util {
     private static pixel find_new_center(Mat input_image, Mat center_mask, center_update_method method) {
         Point3 sums_bgr = new Point3(0, 0, 0);
         long pixels_in_cluster = 0L;   // Количество пикселей в данном кластере
-        // Проходим по каждому пикселю изображения и собираем статистику по кластеру
+        // Проходим по каждому пикселю изображения и собираем информацию о кластере
         for (int y = 0; y < input_image.rows(); ++y) {
             for (int x = 0; x < input_image.cols(); ++x) {
-                // Если пиксель принадлежит данному кластеру
+                // Если пиксель принадлежит данному центру
                 if ((int) center_mask.get(y, x)[0] != 0) {
                     Point3 pixel_bgr = new Point3(input_image.get(y, x));
                     // Складываем данные по компонентам RGB
@@ -226,17 +226,14 @@ public class math_util {
         return medoid;
     }
 
-    public static segmentation_result ordinary_k_means_plus_plus(Mat input_image, int K, double epsilon) {
+    public static segmentation_result ordinary_k_means_plus_plus(Mat input_image, int K, int iteration_count) {
 
         Mat centers_labels = new Mat(input_image.rows(), input_image.cols(), CvType.CV_8UC1);
 
         List<pixel> centers = pick_plus_plus_centers(input_image, K);
 
-        // Задаем эпсилон для обучения алгоритма
-        double iteration_center_move = Double.MAX_VALUE;
-        // Пока центроиды двигаются - цикл продолжается
-        while (iteration_center_move > epsilon) {
-            iteration_center_move = -1;
+        // Выполняем заданное количество итераций
+        for (int i = 0; i < iteration_count; i++) {
             /* Прикрепляем пиксели к ближайшим центрам
             и находим среднее значения для смещения туда центра */
             for (int y = 0; y < input_image.rows(); y++) {
@@ -258,43 +255,27 @@ public class math_util {
             }
             // Высчитываем новое положение каждого центра
             for (int k = 0; k < centers.size(); k++) {
-                pixel old_center = centers.get(k);
                 Mat center_mask = new Mat();
                 Core.compare(centers_labels, new Scalar(k), center_mask, Core.CMP_EQ);
                 pixel new_center = find_new_center(input_image, center_mask, center_update_method.mean);
                 centers.set(k, new_center);
-                double center_move_distance = find_color_distance(old_center, new_center);
-                if (center_move_distance > iteration_center_move) {
-                    iteration_center_move = center_move_distance;
-                }
             }
         }
-        /*Mat output_image_float = new Mat(input_image.rows(), input_image.cols(), CvType.CV_32FC3);
-        for (int i = 0; i < K; i++) {
-            Mat mask = new Mat();
-            Core.compare(centers_labels, new Scalar(i), mask, Core.CMP_EQ);
-            pixel center = centers.get(i);
-            output_image_float.setTo(new Scalar(center.b, center.g, center.r), mask);
-        } */
         Mat output_image_float = draw_contours(input_image, centers_labels, K);
-        //Mat output_image_float = fill_segments(input_image, centers, centers_labels, K);
         Mat output_image = new Mat();
         output_image_float.convertTo(output_image, CvType.CV_8UC3);
-        return new segmentation_result(input_image, output_image, centers_labels, K, epsilon);
+        return new segmentation_result(input_image, output_image, centers_labels, K, iteration_count);
     }
 
-    public static segmentation_result constraints_k_medoids_plus_plus(Mat input_image, int K, double epsilon) {
+    public static segmentation_result constraints_k_medoids_plus_plus(Mat input_image, int K, int iteration_count) {
         Mat centers_labels = new Mat(input_image.rows(), input_image.cols(), CvType.CV_8SC1);
 
         PriorityQueue<queue_object> queue = new PriorityQueue<>();
 
         List<pixel> centers = pick_plus_plus_centers(input_image, K);
 
-        double iteration_center_move = Double.MAX_VALUE;
-        // Пока центры двигаются - цикл продолжается
-        while (iteration_center_move > epsilon) {
-            // На новой итерации сбрасывается величина смещения
-            iteration_center_move = -1;
+        // Выполняем заданное число итераций
+        for (int i = 0; i < iteration_count; i++) {
             // На новой итерации метки центров сбрасываются
             centers_labels.setTo(new Scalar(-1));
             // Добавляем центры в очередь с нулевым приоритетом
@@ -316,21 +297,16 @@ public class math_util {
             // Высчитываем новое положение каждого центра
             // Центр берется из кластера
             for (int k = 0; k < centers.size(); k++) {
-                pixel old_center = centers.get(k);
                 Mat center_mask = new Mat();
                 Core.compare(centers_labels, new Scalar(k), center_mask, Core.CMP_EQ);
                 pixel new_center = find_new_center(input_image, center_mask, center_update_method.medoid);
                 centers.set(k, new_center);
-                double center_move_distance = find_color_distance(old_center, new_center);
-                if (center_move_distance > iteration_center_move) {
-                    iteration_center_move = center_move_distance;
-                }
             }
         }
         Mat output_image_float = draw_contours(input_image, centers_labels, K);
         Mat output_image = new Mat();
         output_image_float.convertTo(output_image, CvType.CV_8UC3);
-        return new segmentation_result(input_image, output_image, centers_labels, K, epsilon);
+        return new segmentation_result(input_image, output_image, centers_labels, K, iteration_count);
     }
 
 

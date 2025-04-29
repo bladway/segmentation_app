@@ -3,7 +3,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-src/main/resources/validation_images_base64*
+src/main/resources/dataset/
 develop.env
 
 ### IntelliJ IDEA ###

@@ -14,13 +14,13 @@ public class image_processed {
     public image_processed(
             byte[] image_processed_raw,
             Integer k_value,
-            Double epsilon,
+            Integer iteration_count,
             segmentation_method segmentation_method,
             image original_image
     ) {
         this.image_processed_raw = image_processed_raw;
         this.k_value = k_value;
-        this.epsilon = epsilon;
+        this.iteration_count = iteration_count;
         this.segmentation_method = segmentation_method;
         this.original_image = original_image;
     }
@@ -37,7 +37,7 @@ public class image_processed {
     private Integer k_value;
 
     @Column(nullable = false)
-    private Double epsilon;
+    private Integer iteration_count;
 
     @Enumerated(EnumType.STRING)
     @JdbcType(PostgreSQLEnumJdbcType.class)

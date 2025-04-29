@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,10 +18,8 @@ import ru.vsu.cs.bladway.repositories.image_processed_repository;
 import ru.vsu.cs.bladway.repositories.image_repository;
 import ru.vsu.cs.bladway.utils.math_util;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.File;
 import java.io.IOException;
-import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,14 +71,14 @@ public class segmentation_app_controller {
     public void write_image_processed_raw(
             byte[] image_processed_raw,
             Integer k_value,
-            Double epsilon,
+            Integer iteration_count,
             segmentation_method segmentation_method,
             image original_image
     ) {
         image_processed_repository.save(new image_processed(
                 image_processed_raw,
                 k_value,
-                epsilon,
+                iteration_count,
                 segmentation_method,
                 original_image
         ));
@@ -88,51 +87,51 @@ public class segmentation_app_controller {
     public void write_image_processed(
             Mat image_processed,
             Integer k_value,
-            Double epsilon,
+            Integer iteration_count,
             segmentation_method segmentation_method,
             image original_image
     ) {
         MatOfByte buffer = new MatOfByte();
         Imgcodecs.imencode(images_extension, image_processed, buffer);
         byte[] image_processed_raw = buffer.toArray();
-        write_image_processed_raw(image_processed_raw, k_value, epsilon, segmentation_method, original_image);
+        write_image_processed_raw(image_processed_raw, k_value, iteration_count, segmentation_method, original_image);
     }
 
-    public void process_validation_images(String validation_images_base64_path) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(validation_images_base64_path));
-        String image_base64 = "";
-        long i = 1;
-        while ((image_base64 = reader.readLine()) != null) {
-            byte[] file_content = Base64.getDecoder().decode(image_base64);
+    public void process_dataset(String dataset_path) throws IOException {
+        for (long i = 1; i <= 6; i++) {
             if (read_by_id_image(i) == null) {
-                write_image_raw(file_content);
+                write_image_raw(
+                        new UrlResource(
+                                new File(dataset_path + i + images_extension).toURI())
+                                .getInputStream()
+                                .readAllBytes()
+                );
             }
-            i++;
         }
 
-        int k_value = 3;
-        double epsilon = 1;
+        int k_value = 2;
+        int iteration_count = 10;
 
-        for (i = 1; i <= 6; i++) {
+        for (long i = 1; i <= 6; i++) {
             image input_image = read_by_id_image(i);
             Mat input_image_mat = read_mat_by_image(input_image);
 
             Mat ordinary_k_means_plus_plus_output_image =
-                    math_util.ordinary_k_means_plus_plus(input_image_mat, k_value, epsilon).output_image;
+                    math_util.ordinary_k_means_plus_plus(input_image_mat, k_value, iteration_count).output_image;
             write_image_processed(
                     ordinary_k_means_plus_plus_output_image,
                     k_value,
-                    epsilon,
+                    iteration_count,
                     segmentation_method.ORDINARY_K_MEANS_PLUS_PLUS,
                     input_image
             );
 
             Mat constraints_k_medoids_plus_plus_output_image =
-                    math_util.constraints_k_medoids_plus_plus(input_image_mat, k_value, epsilon).output_image;
+                    math_util.constraints_k_medoids_plus_plus(input_image_mat, k_value, iteration_count).output_image;
             write_image_processed(
                     constraints_k_medoids_plus_plus_output_image,
                     k_value,
-                    epsilon,
+                    iteration_count,
                     segmentation_method.CONSTRAINTS_K_MEDOIDS_PLUS_PLUS,
                     input_image
             );

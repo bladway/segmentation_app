@@ -13,9 +13,9 @@ import java.util.Random;
 @SpringBootApplication
 public class segmentation_app {
 
-	public static String validation_images_base64_path = "src/main/resources/validation_images_base64.txt";
+	public static String dataset_path = System.getenv("SEGMENTATION_APP_DATASET_PATH");
 
-	public static Random random = new Random("segmentation_app".hashCode());
+	public static Random random = new Random("segments".hashCode());
 
 	public static String images_extension = ".png";
 
@@ -34,12 +34,12 @@ public class segmentation_app {
 			new Scalar(0, 128, 255),
 	};
 
-	public static void main(String[] args) throws IOException, InterruptedException {
+	public static void main(String[] args) throws IOException {
 		OpenCV.loadLocally();
 
 		//System.setProperty("java.awt.headless", "false");
 		ApplicationContext context = SpringApplication.run(segmentation_app.class, args);
-		context.getBean(segmentation_app_controller.class).process_validation_images(validation_images_base64_path);
+		context.getBean(segmentation_app_controller.class).process_dataset(dataset_path);
 	}
 
 }
