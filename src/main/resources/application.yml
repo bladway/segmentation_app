@@ -1,0 +1,26 @@
+server:
+  port: ${SEGMENTATION_APP_PORT}
+spring:
+  application:
+    name: segmentation_app
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: "jdbc:postgresql://${SEGMENTATION_APP_POSTGRES_HOST}:${SEGMENTATION_APP_POSTGRES_PORT}/\
+          ${SEGMENTATION_APP_POSTGRES_DB}?currentSchema=${SEGMENTATION_APP_POSTGRES_SCHEMA}"
+    username: ${SEGMENTATION_APP_POSTGRES_USER}
+    password: ${SEGMENTATION_APP_POSTGRES_PASSWORD}
+    hikari:
+      connection-timeout: 60000
+      maximum-pool-size: 80
+  jpa:
+    hibernate:
+      ddl-auto: create-drop # потом поменять на update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: true
+  servlet:
+    multipart:
+      max-file-size: 40MB
+      max-request-size: 50MB
