@@ -2,6 +2,7 @@ package ru.vsu.cs.bladway.dtos;
 
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import org.opencv.core.Mat;
 import org.opencv.core.Point3;
 
 @AllArgsConstructor
@@ -22,6 +23,11 @@ public class pixel {
         this.g = bgr.y;
         this.r = bgr.z;
     }
+
+    public pixel(Integer y, Integer x, Mat input_image) {
+        this(y, x, input_image.get(y, x));
+    }
+
     public Integer y;
     public Integer x;
     public Double b;

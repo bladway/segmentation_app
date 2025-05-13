@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcType;
 import org.hibernate.dialect.PostgreSQLEnumJdbcType;
+import ru.vsu.cs.bladway.enums.center_init_method;
 import ru.vsu.cs.bladway.enums.segmentation_method;
 
 @Entity
@@ -15,12 +16,14 @@ public class image_processed {
             byte[] image_processed_raw,
             Integer k_value,
             Integer iteration_count,
+            center_init_method center_init_method,
             segmentation_method segmentation_method,
             image original_image
     ) {
         this.image_processed_raw = image_processed_raw;
         this.k_value = k_value;
         this.iteration_count = iteration_count;
+        this.center_init_method = center_init_method;
         this.segmentation_method = segmentation_method;
         this.original_image = original_image;
     }
@@ -38,6 +41,10 @@ public class image_processed {
 
     @Column(nullable = false)
     private Integer iteration_count;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    private center_init_method center_init_method;
 
     @Enumerated(EnumType.STRING)
     @JdbcType(PostgreSQLEnumJdbcType.class)

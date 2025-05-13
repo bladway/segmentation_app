@@ -1,6 +1,7 @@
 package ru.vsu.cs.bladway.controllers;
 
 import lombok.RequiredArgsConstructor;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import ru.vsu.cs.bladway.dtos.segmentation_result;
+import ru.vsu.cs.bladway.enums.center_init_method;
 import ru.vsu.cs.bladway.enums.segmentation_method;
 import ru.vsu.cs.bladway.models.image;
 import ru.vsu.cs.bladway.models.image_processed;
@@ -22,7 +25,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-
 import static ru.vsu.cs.bladway.segmentation_app.images_extension;
 
 @RequiredArgsConstructor
@@ -72,6 +74,7 @@ public class segmentation_app_controller {
             byte[] image_processed_raw,
             Integer k_value,
             Integer iteration_count,
+            center_init_method center_init_method,
             segmentation_method segmentation_method,
             image original_image
     ) {
@@ -79,6 +82,7 @@ public class segmentation_app_controller {
                 image_processed_raw,
                 k_value,
                 iteration_count,
+                center_init_method,
                 segmentation_method,
                 original_image
         ));
@@ -88,17 +92,20 @@ public class segmentation_app_controller {
             Mat image_processed,
             Integer k_value,
             Integer iteration_count,
+            center_init_method center_init_method,
             segmentation_method segmentation_method,
             image original_image
     ) {
         MatOfByte buffer = new MatOfByte();
         Imgcodecs.imencode(images_extension, image_processed, buffer);
         byte[] image_processed_raw = buffer.toArray();
-        write_image_processed_raw(image_processed_raw, k_value, iteration_count, segmentation_method, original_image);
+        write_image_processed_raw(
+                image_processed_raw, k_value, iteration_count, center_init_method, segmentation_method, original_image
+        );
     }
 
-    public void process_dataset(String dataset_path) throws IOException {
-        for (long i = 1; i <= 6; i++) {
+    public void process_dataset(String dataset_path, Integer images_dataset_count) throws IOException {
+        for (long i = 1; i <= images_dataset_count; i++) {
             if (read_by_id_image(i) == null) {
                 write_image_raw(
                         new UrlResource(
@@ -109,32 +116,53 @@ public class segmentation_app_controller {
             }
         }
 
+        //image_processed_repository.deleteAll();
+
         int k_value = 2;
         int iteration_count = 10;
 
-        for (long i = 1; i <= 6; i++) {
+        for (long i = 1; i <= images_dataset_count; i++) {
             image input_image = read_by_id_image(i);
             Mat input_image_mat = read_mat_by_image(input_image);
 
-            Mat ordinary_k_means_plus_plus_output_image =
-                    math_util.ordinary_k_means_plus_plus(input_image_mat, k_value, iteration_count).output_image;
+            segmentation_result output = math_util.ordinary_k_means(
+                    input_image_mat, k_value, iteration_count, center_init_method.RANDOM
+            );
+            // Переупорядочиваем центры меток так, чтобы нулевой кластер был кластером бумаги
+            output.centers_labels = math_util.make_paper_center_first(output.centers_labels, k_value);
+            // Рисуем границы сегментов
+            Mat output_image_float = math_util.draw_contours(input_image_mat, output.centers_labels, k_value);
+            // Сохраняем результат сегментации
+            Mat output_image = new Mat();
+            output_image_float.convertTo(output_image, CvType.CV_8UC3);
             write_image_processed(
-                    ordinary_k_means_plus_plus_output_image,
+                    output_image,
                     k_value,
                     iteration_count,
-                    segmentation_method.ORDINARY_K_MEANS_PLUS_PLUS,
+                    center_init_method.RANDOM,
+                    segmentation_method.ORDINARY_K_MEANS,
                     input_image
             );
 
-            Mat constraints_k_medoids_plus_plus_output_image =
-                    math_util.constraints_k_medoids_plus_plus(input_image_mat, k_value, iteration_count).output_image;
+            /*segmentation_result output = math_util.constraints_k_medoids(
+                    input_image_mat, k_value, iteration_count, center_init_method.RANDOM
+            ); // 25 секунд modified // 35 секунд обычный
+            // Переупорядочиваем центры меток так, чтобы нулевой кластер был кластером бумаги
+            output.centers_labels = math_util.make_paper_center_first(output.centers_labels, k_value);
+            // Рисуем границы сегментов
+            Mat output_image_float = math_util.draw_contours(input_image_mat, output.centers_labels, k_value);
+            // Сохраняем результат сегментации
+            Mat output_image = new Mat();
+            output_image_float.convertTo(output_image, CvType.CV_8UC3);
             write_image_processed(
-                    constraints_k_medoids_plus_plus_output_image,
+                    output_image,
                     k_value,
                     iteration_count,
-                    segmentation_method.CONSTRAINTS_K_MEDOIDS_PLUS_PLUS,
+                    center_init_method.RANDOM,
+                    segmentation_method.CONSTRAINTS_K_MEDOIDS,
                     input_image
-            );
+            );*/
+
         }
     }
 

@@ -13,11 +13,11 @@ import java.util.Random;
 @SpringBootApplication
 public class segmentation_app {
 
-	public static String dataset_path = System.getenv("SEGMENTATION_APP_DATASET_PATH");
+	public final static Random random = new Random(System.getenv("SEGMENTATION_APP_RANDOM_SEED").hashCode());
 
-	public static Random random = new Random("segments".hashCode());
+	public final static String images_extension = System.getenv("SEGMENTATION_APP_IMAGES_EXTENSION");
 
-	public static String images_extension = ".png";
+	public static Double center_window_size = 0.2;
 
 	public static Scalar[] colors = new Scalar[] {
 			new Scalar(255, 0, 0),
@@ -34,12 +34,19 @@ public class segmentation_app {
 			new Scalar(0, 128, 255),
 	};
 
+	private final static String dataset_path = System.getenv("SEGMENTATION_APP_DATASET_PATH");
+
+	private final static Integer images_dataset_count =
+			Integer.valueOf(System.getenv("SEGMENTATION_APP_IMAGES_DATASET_COUNT"));
+
 	public static void main(String[] args) throws IOException {
 		OpenCV.loadLocally();
 
 		//System.setProperty("java.awt.headless", "false");
 		ApplicationContext context = SpringApplication.run(segmentation_app.class, args);
-		context.getBean(segmentation_app_controller.class).process_dataset(dataset_path);
+		long m = System.currentTimeMillis();
+		context.getBean(segmentation_app_controller.class).process_dataset(dataset_path, images_dataset_count);
+		System.out.println((System.currentTimeMillis() - m) / 1000.0 + " seconds");
 	}
 
 }
