@@ -24,3 +24,6 @@ spring:
     multipart:
       max-file-size: 40MB
       max-request-size: 50MB
+logging:
+  file:
+    name: segmentation_app.log

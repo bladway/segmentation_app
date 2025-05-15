@@ -5,6 +5,8 @@ build/
 !**/src/test/**/build/
 src/main/resources/dataset/
 develop.env
+deploy.env
+*.log
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

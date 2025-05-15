@@ -32,6 +32,8 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql:42.7.5")
 }
 
+
 tasks.wrapper {
     gradleVersion = "8.14"
 }
+

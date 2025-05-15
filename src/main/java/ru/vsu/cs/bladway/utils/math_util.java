@@ -62,34 +62,24 @@ public class math_util {
         );
     }
 
-    private static Mat swap_values(Mat mat, double y, double x) {
+    private static void replace_values(Mat mat, int what, int on_what) {
+        // Маска заменяемого элемента
+        Mat binary_mask = new Mat();
+        Core.compare(mat, new Scalar(what), binary_mask, Core.CMP_EQ);
+        mat.setTo(new Scalar(on_what), binary_mask);
+    }
+
+    private static void swap_values(Mat mat, int y, int x) {
         // Маска первого элемента
         Mat y_binary_mask = new Mat();
-        Core.compare(mat, Scalar.all(y), y_binary_mask, Core.CMP_EQ);
+        Core.compare(mat, new Scalar(y), y_binary_mask, Core.CMP_EQ);
         // Маска второго элемента;
         Mat x_binary_mask = new Mat();
-        Core.compare(mat, Scalar.all(x), x_binary_mask, Core.CMP_EQ);
-        // Общая маска
-        Mat y_or_x_binary_mask = new Mat();
-        Core.bitwise_or(y_binary_mask, x_binary_mask, y_or_x_binary_mask);
-        // Отрицание общей маски
-        Mat not_y_or_x_binary_mask = new Mat();
-        Core.bitwise_not(y_or_x_binary_mask, not_y_or_x_binary_mask);
-
+        Core.compare(mat, new Scalar(x), x_binary_mask, Core.CMP_EQ);
         // Копируем второй элемент на позиции первого
-        Mat y_to_x_values = new Mat();
-        Core.multiply(y_binary_mask, Scalar.all(x), y_to_x_values);
+        mat.setTo(new Scalar(x), y_binary_mask);
         // Копируем первый элемент на позиции второго
-        Mat x_to_y_values = new Mat();
-        Core.multiply(x_binary_mask, Scalar.all(y), x_to_y_values);
-        // Находим незатронутую матрицу значений
-        Mat unchanged_values = new Mat();
-        Core.copyTo(mat, unchanged_values, not_y_or_x_binary_mask);
-        // Находим результирующую матрицу
-        Mat result_values = new Mat();
-        Core.add(y_to_x_values, x_to_y_values, result_values);
-        Core.add(result_values, unchanged_values, result_values);
-        return result_values;
+        mat.setTo(new Scalar(y), x_binary_mask);
     }
 
     private static List<pixel> pick_random_centers(Mat input_image, int K) {
@@ -172,20 +162,20 @@ public class math_util {
         // Инициализация центров с помощью окна и угловых пикселей
         List<pixel> centers = new ArrayList<>();
         // Первым центром берем пиксель из центральной части изображения, наиболее похожий на существующие
-        centers.add(find_new_center(
-                input_image.submat(
-                        (int) (input_image.rows() * (0.5 - center_window_size / 2)),
-                        (int) (input_image.rows() * (0.5 + center_window_size / 2)),
-                        (int) (input_image.cols() * (0.5 - center_window_size / 2)),
-                        (int) (input_image.cols() * (0.5 + center_window_size / 2))
-                ),
-                new Mat(
-                        (int) (input_image.rows() * center_window_size),
-                        (int) (input_image.cols() * center_window_size),
-                        CvType.CV_8UC1
-                ).setTo(new Scalar(255)),
-                center_update_method.medoid
-        ));
+        int window_start_row = (int) (input_image.rows() * (0.5 - center_window_size / 2));
+        int window_end_row = (int) (input_image.rows() * (0.5 + center_window_size / 2));
+        int window_start_col = (int) (input_image.cols() * (0.5 - center_window_size / 2));
+        int window_end_col =  (int) (input_image.cols() * (0.5 + center_window_size / 2));
+        Mat window_input_image = input_image.submat(window_start_row, window_end_row, window_start_col, window_end_col);
+        Mat window_binary_center_mask = new Mat(
+                window_input_image.rows(),
+                window_input_image.cols(),
+                CvType.CV_8UC1
+        ).setTo(new Scalar(255));
+        centers.add(find_new_center(window_input_image, window_binary_center_mask, center_update_method.medoid));
+        // Сдвиг пикселей, чтобы значения соответствовали входному изображению
+        centers.getFirst().y += window_start_row;
+        centers.getFirst().x += window_start_col;
         // Все остальные сегменты берем начиная с угловых частей изображения
         int div = (K - 1) / 4;
         int mod = (K - 1) % 4;
@@ -232,39 +222,8 @@ public class math_util {
         return centers;
     }
 
-    private static void add_near_pixels_to_queue(Mat input_image, Queue<queue_object> queue, queue_object queue_object) {
-        pixel pixel = queue_object.pixel;
-        if (pixel.y > 0) {
-            queue.add(new queue_object(
-                    new pixel(pixel.y - 1, pixel.x, input_image),
-                    queue_object.center_pixel,
-                    queue_object.center_index
-            ));
-        }
-        if (pixel.y < input_image.rows() - 1) {
-            queue.add(new queue_object(
-                    new pixel(pixel.y + 1, pixel.x, input_image),
-                    queue_object.center_pixel,
-                    queue_object.center_index
-            ));
-        }
-        if (pixel.x > 0) {
-            queue.add(new queue_object(
-                    new pixel(pixel.y, pixel.x - 1, input_image),
-                    queue_object.center_pixel,
-                    queue_object.center_index
-            ));
-        }
-        if (pixel.x < input_image.cols() - 1) {
-            queue.add(new queue_object(
-                    new pixel(pixel.y, pixel.x + 1, input_image),
-                    queue_object.center_pixel,
-                    queue_object.center_index
-            ));
-        }
-    }
 
-    private static void add_near_pixels_to_queue_modified(
+    private static void add_unvisited_near_pixels_to_queue(
             Mat input_image,
             Mat centers_labels,
             Queue<queue_object> queue,
@@ -347,18 +306,55 @@ public class math_util {
         return medoid;
     }
 
+    private static void make_paper_center_first(List<pixel> centers, Mat centers_labels, int K) {
+        int paper_cluster_index = -1;
+        int paper_cluster_in_window_size = -1;
+        Mat window_centers_labels = centers_labels.submat(
+                (int) (centers_labels.rows() * (0.5 - center_window_size / 2)),
+                (int) (centers_labels.rows() * (0.5 + center_window_size / 2)),
+                (int) (centers_labels.cols() * (0.5 - center_window_size / 2)),
+                (int) (centers_labels.cols() * (0.5 + center_window_size / 2))
+        );
+        for (int k = 0; k < K; k++) {
+            Mat window_binary_center_mask = new Mat();
+            Core.compare(window_centers_labels, new Scalar(k), window_binary_center_mask, Core.CMP_EQ);
+            int cluster_in_window_size = (int) Core.sumElems(window_binary_center_mask).val[0] / 255;
+            if (cluster_in_window_size > paper_cluster_in_window_size) {
+                paper_cluster_index = k;
+                paper_cluster_in_window_size = cluster_in_window_size;
+            }
+        }
+        Collections.swap(centers, 0, paper_cluster_index);
+        swap_values(centers_labels, 0, paper_cluster_index);
+    }
+
+    private static double calculate_error(Mat centers_labels, int K, Mat expected_markup) {
+        Mat calculated_markup = new Mat();
+        centers_labels.copyTo(calculated_markup);
+        // Заменяем в рассчитанной маске все сегменты не нулевого на 255
+        for (int k = 1; k < K; k++) {
+            replace_values(calculated_markup, k, 255);
+        }
+        Mat correct_binary_mask = new Mat();
+        Core.compare(calculated_markup, expected_markup, correct_binary_mask, Core.CMP_EQ);
+        double correct = Core.sumElems(correct_binary_mask).val[0] / 255 / centers_labels.rows() / centers_labels.cols();
+        return 1 - correct;
+    }
+
     public static segmentation_result ordinary_k_means(
-        Mat input_image, int K, int iteration_count, center_init_method method
+        Mat input_image, int K, int iteration_count, center_init_method method, Mat input_markup
     ) {
-
         Mat centers_labels = new Mat(input_image.rows(), input_image.cols(), CvType.CV_8UC1);
-
         List<pixel> centers =
                 method == center_init_method.RANDOM ? pick_random_centers(input_image, K) :
                 method == center_init_method.PLUS_PLUS ? pick_plus_plus_centers(input_image, K) :
                 method == center_init_method.PAPER ? pick_paper_centers(input_image, K) :
                 pick_random_centers(input_image, K);
 
+        List<Double> iteration_errors = new ArrayList<>();
+        List<Long> processing_times = new ArrayList<>();
+        // Начинаем отсчет времени
+        long start = System.currentTimeMillis();
         // Выполняем заданное количество итераций
         for (int i = 0; i < iteration_count; i++) {
             /* Прикрепляем пиксели к ближайшим центрам
@@ -387,27 +383,36 @@ public class math_util {
                 pixel new_center = find_new_center(input_image, binary_center_mask, center_update_method.mean);
                 centers.set(k, new_center);
             }
+            // Добавляем общее время в накопительный массив
+            processing_times.add(System.currentTimeMillis() - start);
+            // Переупорядочиваем центры меток так, чтобы нулевой кластер был кластером бумаги
+            make_paper_center_first(centers, centers_labels, K);
+            // Считаем ошибку на этой итерации
+            iteration_errors.add(calculate_error(centers_labels, K, input_markup));
         }
-        return new segmentation_result(centers_labels);
+        return new segmentation_result(centers_labels, centers, iteration_errors, processing_times);
     }
 
 
     public static segmentation_result constraints_k_medoids(
-            Mat input_image, int K, int iteration_count, center_init_method method
+            Mat input_image, int K, int iteration_count, center_init_method method, Mat input_markup
     ) {
         Mat centers_labels = new Mat(input_image.rows(), input_image.cols(), CvType.CV_8SC1);
-
-        PriorityQueue<queue_object> queue = new PriorityQueue<>();
-
         List<pixel> centers =
                 method == center_init_method.RANDOM ? pick_random_centers(input_image, K) :
                 method == center_init_method.PLUS_PLUS ? pick_plus_plus_centers(input_image, K) :
                 method == center_init_method.PAPER ? pick_paper_centers(input_image, K) :
                 pick_random_centers(input_image, K);
+        PriorityQueue<queue_object> queue = new PriorityQueue<>();
 
+        List<Double> iteration_errors = new ArrayList<>();
+        List<Long> processing_times = new ArrayList<>();
+        // Начинаем отсчет времени
+        long start = System.currentTimeMillis();
         // Выполняем заданное число итераций
         for (int i = 0; i < iteration_count; i++) {
             // На новой итерации метки центров сбрасываются
+            centers_labels.convertTo(centers_labels, CvType.CV_8SC1);
             centers_labels.setTo(new Scalar(-1));
             // Добавляем центры в очередь с нулевым приоритетом
             for (int k = 0; k < centers.size(); k++) {
@@ -422,7 +427,7 @@ public class math_util {
                 // Проверка, что добавляемый пиксель еще не добавлен
                 if ((int) centers_labels.get(pixel.y, pixel.x)[0] == -1) {
                     centers_labels.put(pixel.y, pixel.x, queue_object.center_index);
-                    add_near_pixels_to_queue_modified(input_image, centers_labels, queue, queue_object);
+                    add_unvisited_near_pixels_to_queue(input_image, centers_labels, queue, queue_object);
                 }
             }
             // Высчитываем новое положение каждого центра
@@ -433,31 +438,27 @@ public class math_util {
                 pixel new_center = find_new_center(input_image, binary_center_mask, center_update_method.medoid);
                 centers.set(k, new_center);
             }
+            // Добавляем общее время в накопительный массив
+            processing_times.add(System.currentTimeMillis() - start);
+            // Когда все метки центров расставлены, переходим в только положительные значения
+            centers_labels.convertTo(centers_labels, CvType.CV_8UC1);
+            // Переупорядочиваем центры меток так, чтобы нулевой кластер был кластером бумаги
+            make_paper_center_first(centers, centers_labels, K);
+            // Считаем ошибку на этой итерации
+            iteration_errors.add(calculate_error(centers_labels, K, input_markup));
         }
-        // Когда все метки центров расставлены, переходим в только положительные значения
-        centers_labels.convertTo(centers_labels, CvType.CV_8UC1);
-        return new segmentation_result(centers_labels);
+        return new segmentation_result(centers_labels, centers, iteration_errors, processing_times);
     }
 
-    public static Mat make_paper_center_first(Mat centers_labels, int K) {
-        int paper_cluster_index = -1;
-        int paper_cluster_in_window_size = -1;
-        Mat window_centers_labels = centers_labels.submat(
-            (int) (centers_labels.rows() * (0.5 - center_window_size / 2)),
-            (int) (centers_labels.rows() * (0.5 + center_window_size / 2)),
-            (int) (centers_labels.cols() * (0.5 - center_window_size / 2)),
-            (int) (centers_labels.cols() * (0.5 + center_window_size / 2))
-        );
+    public static Mat draw_segments(Mat input_image, List<pixel> centers, Mat centers_labels, int K) {
+        Mat output_image = input_image.clone();
         for (int k = 0; k < K; k++) {
-            Mat window_binary_center_mask = new Mat();
-            Core.compare(window_centers_labels, new Scalar(k), window_binary_center_mask, Core.CMP_EQ);
-            int cluster_in_window_size = (int) Core.sumElems(window_binary_center_mask).val[0];
-            if (cluster_in_window_size > paper_cluster_in_window_size) {
-                paper_cluster_index = k;
-                paper_cluster_in_window_size = cluster_in_window_size;
-            }
+            // Бинаризационная маска текущего сегмента
+            Mat binary_center_mask = new Mat();
+            Core.compare(centers_labels, new Scalar(k), binary_center_mask, Core.CMP_EQ);
+            output_image.setTo(new Scalar(centers.get(k).b, centers.get(k).g, centers.get(k).r), binary_center_mask);
         }
-        return swap_values(centers_labels, 0, paper_cluster_index);
+        return output_image;
     }
 
     public static Mat draw_contours(Mat input_image, Mat centers_labels, int K) {
@@ -481,17 +482,6 @@ public class math_util {
                     colors[k],
                     8
             );
-        }
-        return output_image;
-    }
-
-    public static Mat draw_segments(Mat input_image, List<pixel> centers, Mat centers_labels, int K) {
-        Mat output_image = input_image.clone();
-        for (int k = 0; k < K; k++) {
-            // Бинаризационная маска текущего сегмента
-            Mat binary_center_mask = new Mat();
-            Core.compare(centers_labels, new Scalar(k), binary_center_mask, Core.CMP_EQ);
-            output_image.setTo(new Scalar(centers.get(k).b, centers.get(k).g, centers.get(k).r), binary_center_mask);
         }
         return output_image;
     }

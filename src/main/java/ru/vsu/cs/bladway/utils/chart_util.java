@@ -23,7 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 @RequiredArgsConstructor
-public class frame_util {
+public class chart_util {
     public static void showImage(Mat imageMat, String title) {
         MatOfByte imageMatOfByte = new MatOfByte();
         Imgcodecs.imencode(".jpg", imageMat, imageMatOfByte);
