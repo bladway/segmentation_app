@@ -3,8 +3,6 @@ package ru.vsu.cs.bladway.models;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcType;
-import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import ru.vsu.cs.bladway.enums.center_init_method;
 import ru.vsu.cs.bladway.enums.segmentation_method;
 
@@ -14,6 +12,37 @@ import java.util.List;
 @NoArgsConstructor
 @Data
 public class image_processed {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "image_processed_id")
+    private long imageProcessedId;
+    @Lob
+    @Column(name = "image_processed_raw", nullable = false)
+    private byte[] imageProcessedRaw;
+    @Column(name = "k_value", nullable = false)
+    private int kValue;
+    @Column(name = "iteration_count", nullable = false)
+    private int iterationCount;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "center_init_method", nullable = false)
+    private center_init_method centerInitMethod;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "segmentation_method", nullable = false)
+    private segmentation_method segmentationMethod;
+    @ManyToOne
+    @JoinColumn(name = "image_id", nullable = false)
+    private image originalImage;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "error", joinColumns = @JoinColumn(name = "image_processed_id"))
+    @OrderColumn(name = "index")
+    @Column(name = "image_iteration_errors", nullable = false)
+    private List<Double> imageIterationErrors;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "time", joinColumns = @JoinColumn(name = "image_processed_id"))
+    @OrderColumn(name = "index")
+    @Column(name = "image_processing_times", nullable = false)
+    private List<Long> imageProcessingTimes;
+
     public image_processed(
             byte[] image_processed_raw,
             Integer k_value,
@@ -24,51 +53,13 @@ public class image_processed {
             List<Double> image_iteration_errors,
             List<Long> image_processing_times
     ) {
-        this.image_processed_raw = image_processed_raw;
-        this.k_value = k_value;
-        this.iteration_count = iteration_count;
-        this.center_init_method = center_init_method;
-        this.segmentation_method = segmentation_method;
-        this.original_image = original_image;
-        this.image_iteration_errors = image_iteration_errors;
-        this.image_processing_times = image_processing_times;
+        this.imageProcessedRaw = image_processed_raw;
+        this.kValue = k_value;
+        this.iterationCount = iteration_count;
+        this.centerInitMethod = center_init_method;
+        this.segmentationMethod = segmentation_method;
+        this.originalImage = original_image;
+        this.imageIterationErrors = image_iteration_errors;
+        this.imageProcessingTimes = image_processing_times;
     }
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private long image_processed_id;
-
-    @Lob
-    @Column(nullable = false)
-    private byte[] image_processed_raw;
-
-    @Column(nullable = false)
-    private int k_value;
-
-    @Column(nullable = false)
-    private int iteration_count;
-
-    @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class)
-    private center_init_method center_init_method;
-
-    @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class)
-    private segmentation_method segmentation_method;
-
-    @ManyToOne
-    @JoinColumn(name = "image_id", nullable = false)
-    private image original_image;
-
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "error", joinColumns = @JoinColumn(name = "image_processed_id"))
-    @OrderColumn(name = "index")
-    @Column(nullable = false)
-    private List<Double> image_iteration_errors;
-
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "time", joinColumns = @JoinColumn(name = "image_processed_id"))
-    @OrderColumn(name = "index")
-    @Column(nullable = false)
-    private List<Long> image_processing_times;
 }

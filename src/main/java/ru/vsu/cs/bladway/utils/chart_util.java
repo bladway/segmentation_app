@@ -1,18 +1,22 @@
 package ru.vsu.cs.bladway.utils;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.LegendItem;
+import org.jfree.chart.LegendItemCollection;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.renderer.category.BarRenderer;
-import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.chart.plot.XYPlot;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.Range;
-import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
+import ru.vsu.cs.bladway.enums.center_init_method;
+import ru.vsu.cs.bladway.enums.segmentation_method;
+import ru.vsu.cs.bladway.segmentation_app;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -21,12 +25,13 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Map;
 
 @RequiredArgsConstructor
 public class chart_util {
-    public static void showImage(Mat imageMat, String title) {
+    public static void show_image(Mat imageMat, String title) {
         MatOfByte imageMatOfByte = new MatOfByte();
-        Imgcodecs.imencode(".jpg", imageMat, imageMatOfByte);
+        Imgcodecs.imencode("." + segmentation_app.images_extension, imageMat, imageMatOfByte);
 
         JFrame frame = new JFrame();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -39,139 +44,197 @@ public class chart_util {
         frame.pack();
     }
 
-    public static void showImageText(Mat imageMat, String title) {
-        JFrame frame = new JFrame();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
-        frame.setTitle(title);
-        frame.setLayout(new BorderLayout());
-        JTextArea textArea = new JTextArea();
-        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        JScrollPane scrollPane = new JScrollPane(textArea);
-
-        String resultText = "";
-        for (int i = 0; i < imageMat.rows(); i++) {
-            for (int j = 0; j < imageMat.cols(); j++) {
-                resultText += "[";
-                for (int k = 0; k < imageMat.get(i, j).length; k++) {
-                    resultText += imageMat.get(i, j)[k];
-                    resultText += ", ";
-                }
-                resultText += "]";
+    public static Mat get_iterations_errors_chart_image(
+            Map<Pair<center_init_method, segmentation_method>, Double[]> values,
+            String title
+    ) throws IOException {
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        for (Pair<center_init_method, segmentation_method> pair : values.keySet()) {
+            XYSeries series = new XYSeries(pair.getKey() + " + " + pair.getValue());
+            for (int i = 0; i < values.get(pair).length; i++) {
+                series.add(i + 1, values.get(pair)[i]);
             }
-            resultText += "\n";
+            dataset.addSeries(series);
         }
-
-        textArea.setText(resultText);
-        frame.add(scrollPane, BorderLayout.CENTER);
-        frame.pack();
-    }
-
-    public static void showImageTextScale(Mat imageMat, String title, double scaleX, double scaleY) {
-        JFrame frame = new JFrame();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
-        frame.setTitle(title);
-        frame.setLayout(new BorderLayout());
-        JTextArea textArea = new JTextArea();
-        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        JScrollPane scrollPane = new JScrollPane(textArea);
-
-        Mat littleImageMat = new Mat();
-        Imgproc.resize(imageMat, littleImageMat, new Size(imageMat.cols()*scaleX, imageMat.rows()*scaleY));
-        String resultText = "";
-        for (int i = 0; i < littleImageMat.rows(); i++) {
-            for (int j = 0; j < littleImageMat.cols(); j++) {
-                resultText += "[";
-                for (int k = 0; k < littleImageMat.get(i, j).length; k++) {
-                    resultText += littleImageMat.get(i, j)[k];
-                    resultText += ", ";
-                }
-                resultText += "]";
-            }
-            resultText += "\n";
-        }
-
-        textArea.setText(resultText);
-        frame.add(scrollPane, BorderLayout.CENTER);
-        frame.pack();
-    }
-
-    public static void showImageTextCut(Mat imageMat, String title, Range cutX, Range cutY) {
-        JFrame frame = new JFrame();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
-        frame.setTitle(title);
-        frame.setLayout(new BorderLayout());
-        JTextArea textArea = new JTextArea();
-        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        JScrollPane scrollPane = new JScrollPane(textArea);
-
-        Mat littleImageMat = new Mat();
-        littleImageMat = imageMat.colRange(cutX).rowRange(cutY);
-        String resultText = "";
-        for (int i = 0; i < littleImageMat.rows(); i++) {
-            for (int j = 0; j < littleImageMat.cols(); j++) {
-                resultText += "[";
-                for (int k = 0; k < littleImageMat.get(i, j).length; k++) {
-                    resultText += littleImageMat.get(i, j)[k];
-                    resultText += ", ";
-                }
-                resultText += "]";
-            }
-            resultText += "\n";
-        }
-
-        textArea.setText(resultText);
-        frame.add(scrollPane, BorderLayout.CENTER);
-        frame.pack();
-    }
-
-    public static Mat getChartImage(double[][] values, int K, int passages) throws IOException {
-        DefaultCategoryDataset categoryDataset = new DefaultCategoryDataset();
-        for (int i = 0; i < values.length; i++) {
-            categoryDataset.addValue(values[i][0], "OpenCVRnd", (i + 1) + "");
-            categoryDataset.addValue(values[i][1], "OpenCVPlusPlus", (i + 1) + "");
-            categoryDataset.addValue(values[i][2], "OwnRnd", (i + 1) + "");
-            categoryDataset.addValue(values[i][3], "OwnPlusPlus", (i + 1) + "");
-        }
-        JFreeChart chart = ChartFactory.createBarChart(
-                "D на изображение, на каждый из алгоритмов. Значения усреднены по всем проходам. Количество кластеров: " + K + " Количество проходов: " + passages,
-                "Номер фотографии из датасета",
-                "D - внутрикластерная дисперсия для всего изображения",
-                categoryDataset,
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                title,
+                "Итерация алгоритма",
+                "Величина ошибки",
+                dataset,
                 PlotOrientation.VERTICAL,
                 true,
                 true,
                 false
         );
-        chart.getTitle().setFont(new Font(Font.SANS_SERIF, Font.BOLD, 40));
-
-        CategoryPlot plot = chart.getCategoryPlot();
-
-        plot.getDomainAxis().setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 32));
-        plot.getRangeAxis().setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 32));
-
-        plot.getDomainAxis().setTickLabelFont(new Font(Font.SANS_SERIF, Font.PLAIN, 32));
-        plot.getRangeAxis().setTickLabelFont(new Font(Font.SANS_SERIF, Font.PLAIN, 32));
-
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-        renderer.setDefaultLegendTextFont(new Font(Font.SANS_SERIF, Font.PLAIN, 32));
-        renderer.setDefaultLegendShape(new Rectangle2D.Double(0, 0, 50, 50));
 
 
-        BufferedImage chartImageInt = chart.createBufferedImage(1920, 1080);
-        BufferedImage chartImageByte = new BufferedImage(chartImageInt.getWidth(), chartImageInt.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
-        chartImageByte.getGraphics().drawImage(chartImageInt, 0, 0, null);
+        chart.getTitle().setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
+        XYPlot plot = chart.getXYPlot();
+        plot.getDomainAxis().setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        plot.getRangeAxis().setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        plot.getDomainAxis().setTickLabelFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+        plot.getRangeAxis().setTickLabelFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+        LegendItemCollection old_legend_collection = plot.getLegendItems();
+        LegendItemCollection new_legend_collection = new LegendItemCollection();
+        int idx = 0;
+        for (
+                LegendItem old_legend_item = old_legend_collection.get(idx);
+                old_legend_item != null;
+                old_legend_item = old_legend_collection.get(++idx)
+        ) {
+            LegendItem new_legend_item = new LegendItem(
+                    old_legend_item.getLabel(), old_legend_item.getDescription(),
+                    old_legend_item.getToolTipText(), old_legend_item.getURLText(),
+                    true, new Rectangle2D.Double(0, 0, 15, 15),
+                    true, old_legend_item.getFillPaint(),
+                    false, old_legend_item.getOutlinePaint(),
+                    old_legend_item.getOutlineStroke(), true,
+                    old_legend_item.getLine(), old_legend_item.getLineStroke(),
+                    old_legend_item.getLinePaint());
+            new_legend_item.setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+            new_legend_collection.add(new_legend_item);
+        }
+        plot.setFixedLegendItems(new_legend_collection);
+        for (int i = 0; i < dataset.getSeriesCount(); i++) {
+            plot.getRenderer().setSeriesStroke(i, new BasicStroke(8f));
+        }
 
-        ByteArrayOutputStream byteArrayOutputStreamChart = new ByteArrayOutputStream();
-        ImageIO.write(chartImageByte, "jpg", byteArrayOutputStreamChart);
-        byteArrayOutputStreamChart.flush();
 
+        BufferedImage image_base = chart.createBufferedImage(1000, 750);
+        BufferedImage image =
+                new BufferedImage(image_base.getWidth(), image_base.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+        image.getGraphics().drawImage(image_base, 0, 0, null);
+        ByteArrayOutputStream image_stream = new ByteArrayOutputStream();
+        ImageIO.write(image, segmentation_app.images_extension, image_stream);
         return Imgcodecs.imdecode(
-                new MatOfByte(byteArrayOutputStreamChart.toByteArray()),
+                new MatOfByte(image_stream.toByteArray()),
                 Imgcodecs.IMREAD_UNCHANGED
         );
+    }
+
+    public static Mat get_iterations_times_chart_image(
+            Map<Pair<center_init_method, segmentation_method>, Double[]> values,
+            String title
+    ) throws IOException {
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        for (Pair<center_init_method, segmentation_method> pair : values.keySet()) {
+            XYSeries series = new XYSeries(pair.getKey() + " + " + pair.getValue());
+            for (int i = 0; i < values.get(pair).length; i++) {
+                series.add(i + 1, values.get(pair)[i]);
+            }
+            dataset.addSeries(series);
+        }
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                title,
+                "Итерация алгоритма",
+                "Время в секундах",
+                dataset,
+                PlotOrientation.VERTICAL,
+                true,
+                true,
+                false
+        );
+
+
+        chart.getTitle().setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
+        XYPlot plot = chart.getXYPlot();
+        plot.getDomainAxis().setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        plot.getRangeAxis().setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        plot.getDomainAxis().setTickLabelFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+        plot.getRangeAxis().setTickLabelFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+        LegendItemCollection old_legend_collection = plot.getLegendItems();
+        LegendItemCollection new_legend_collection = new LegendItemCollection();
+        int idx = 0;
+        for (
+                LegendItem old_legend_item = old_legend_collection.get(idx);
+                old_legend_item != null;
+                old_legend_item = old_legend_collection.get(++idx)
+        ) {
+            LegendItem new_legend_item = new LegendItem(
+                    old_legend_item.getLabel(), old_legend_item.getDescription(),
+                    old_legend_item.getToolTipText(), old_legend_item.getURLText(),
+                    true, new Rectangle2D.Double(0, 0, 15, 15),
+                    true, old_legend_item.getFillPaint(),
+                    false, old_legend_item.getOutlinePaint(),
+                    old_legend_item.getOutlineStroke(), true,
+                    old_legend_item.getLine(), old_legend_item.getLineStroke(),
+                    old_legend_item.getLinePaint());
+            new_legend_item.setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+            new_legend_collection.add(new_legend_item);
+        }
+        plot.setFixedLegendItems(new_legend_collection);
+        for (int i = 0; i < dataset.getSeriesCount(); i++) {
+            plot.getRenderer().setSeriesStroke(i, new BasicStroke(8f));
+        }
+
+
+        BufferedImage image_base = chart.createBufferedImage(1000, 750);
+        BufferedImage image =
+                new BufferedImage(image_base.getWidth(), image_base.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+        image.getGraphics().drawImage(image_base, 0, 0, null);
+        ByteArrayOutputStream image_stream = new ByteArrayOutputStream();
+        ImageIO.write(image, segmentation_app.images_extension, image_stream);
+        return Imgcodecs.imdecode(
+                new MatOfByte(image_stream.toByteArray()),
+                Imgcodecs.IMREAD_UNCHANGED
+        );
+    }
+
+    public static void print_mat(Mat imageMat, String title) {
+        JFrame frame = new JFrame();
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+        frame.setTitle(title);
+        frame.setLayout(new BorderLayout());
+        JTextArea textArea = new JTextArea();
+        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        JScrollPane scrollPane = new JScrollPane(textArea);
+
+        StringBuilder resultText = new StringBuilder();
+        for (int i = 0; i < imageMat.rows(); i++) {
+            for (int j = 0; j < imageMat.cols(); j++) {
+                resultText.append("[");
+                for (int k = 0; k < imageMat.get(i, j).length; k++) {
+                    resultText.append(imageMat.get(i, j)[k]);
+                    resultText.append(", ");
+                }
+                resultText.append("]");
+            }
+            resultText.append("\n");
+        }
+
+        textArea.setText(resultText.toString());
+        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.pack();
+    }
+
+    public static void print_mat(Mat image, String title, Range x_range, Range y_range) {
+        JFrame frame = new JFrame();
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+        frame.setTitle(title);
+        frame.setLayout(new BorderLayout());
+        JTextArea textArea = new JTextArea();
+        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        JScrollPane scrollPane = new JScrollPane(textArea);
+
+        Mat littleImageMat = image.colRange(x_range).rowRange(y_range);
+        StringBuilder resultText = new StringBuilder();
+        for (int i = 0; i < littleImageMat.rows(); i++) {
+            for (int j = 0; j < littleImageMat.cols(); j++) {
+                resultText.append("[");
+                for (int k = 0; k < littleImageMat.get(i, j).length; k++) {
+                    resultText.append(littleImageMat.get(i, j)[k]);
+                    resultText.append(", ");
+                }
+                resultText.append("]");
+            }
+            resultText.append("\n");
+        }
+
+        textArea.setText(resultText.toString());
+        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.pack();
     }
 
 }

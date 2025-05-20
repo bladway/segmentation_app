@@ -16,49 +16,27 @@ import static ru.vsu.cs.bladway.segmentation_app.*;
 @RequiredArgsConstructor
 public class math_util {
 
-  /*public static Double findAverageDispersion(Mat startImage, Mat bestLabels, Mat centers, int K) {
-        double[] sqrDistancesPerCluster = new double[K];
-        long[] pixelsCountPerCluster = new long[K];
-        for (int i = 0; i < startImage.rows(); i++) {
-            for (int j = 0; j < startImage.cols(); j++) {
-                int clusterNumber = (int) bestLabels.get(i, j)[0];
-                sqrDistancesPerCluster[clusterNumber] +=
-                        Math.pow(find_color_distance(
-                                new Point3(centers.get(clusterNumber, 0)),
-                                new Point3(startImage.get(i, j))
-                        ), 2);
-                pixelsCountPerCluster[clusterNumber]++;
-            }
-        }
-
-        double[] dispersionsPerCluster = new double[K];
-        for (int i = 0; i < dispersionsPerCluster.length; i++) {
-            dispersionsPerCluster[i] = sqrDistancesPerCluster[i] / pixelsCountPerCluster[i];
-        }
-        return Arrays.stream(dispersionsPerCluster).sum() / dispersionsPerCluster.length;
-    }*/
-
     public static Double find_color_distance(Point3 first_point, Point3 second_point) {
         return Math.sqrt(
                 (second_point.x - first_point.x) * (second_point.x - first_point.x) +
-                (second_point.y - first_point.y) * (second_point.y - first_point.y) +
-                (second_point.z - first_point.z) * (second_point.z - first_point.z)
+                        (second_point.y - first_point.y) * (second_point.y - first_point.y) +
+                        (second_point.z - first_point.z) * (second_point.z - first_point.z)
         );
     }
 
     public static Double find_color_distance(pixel first_pixel, pixel second_pixel) {
         return Math.sqrt(
                 (second_pixel.b - first_pixel.b) * (second_pixel.b - first_pixel.b) +
-                (second_pixel.g - first_pixel.g) * (second_pixel.g - first_pixel.g) +
-                (second_pixel.r - first_pixel.r) * (second_pixel.r - first_pixel.r)
+                        (second_pixel.g - first_pixel.g) * (second_pixel.g - first_pixel.g) +
+                        (second_pixel.r - first_pixel.r) * (second_pixel.r - first_pixel.r)
         );
     }
 
     public static Double find_color_distance(pixel first_pixel, Point3 second_point) {
         return Math.sqrt(
                 (second_point.x - first_pixel.b) * (second_point.x - first_pixel.b) +
-                (second_point.y - first_pixel.g) * (second_point.y - first_pixel.g) +
-                (second_point.z - first_pixel.r) * (second_point.z - first_pixel.r)
+                        (second_point.y - first_pixel.g) * (second_point.y - first_pixel.g) +
+                        (second_point.z - first_pixel.r) * (second_point.z - first_pixel.r)
         );
     }
 
@@ -147,9 +125,9 @@ public class math_util {
                     }
                 }
                 center = new pixel(
-                    (int) center_candidate.y,
-                    (int) center_candidate.x,
-                    input_image.get((int) center_candidate.y, (int) center_candidate.x)
+                        (int) center_candidate.y,
+                        (int) center_candidate.x,
+                        input_image.get((int) center_candidate.y, (int) center_candidate.x)
                 );
             }
             // Добавляем новый центр
@@ -165,7 +143,7 @@ public class math_util {
         int window_start_row = (int) (input_image.rows() * (0.5 - center_window_size / 2));
         int window_end_row = (int) (input_image.rows() * (0.5 + center_window_size / 2));
         int window_start_col = (int) (input_image.cols() * (0.5 - center_window_size / 2));
-        int window_end_col =  (int) (input_image.cols() * (0.5 + center_window_size / 2));
+        int window_end_col = (int) (input_image.cols() * (0.5 + center_window_size / 2));
         Mat window_input_image = input_image.submat(window_start_row, window_end_row, window_start_col, window_end_col);
         Mat window_binary_center_mask = new Mat(
                 window_input_image.rows(),
@@ -185,7 +163,8 @@ public class math_util {
             centers.add(new pixel(input_image.rows() - 1, input_image.cols() - 1, input_image));
             centers.add(new pixel(input_image.rows() - 1, 0, input_image));
             // Сегменты, лежащие на гранях
-            div--; int edge_segments;
+            div--;
+            int edge_segments;
             edge_segments = mod > 0 ? div + 1 : div;
             for (int i = 0; i < edge_segments; i++) {
                 centers.add(new pixel(
@@ -279,9 +258,9 @@ public class math_util {
         }
         // Среднее значение цветов кластера
         Point3 mean = new Point3(
-            sums_bgr.x / pixels_in_cluster,
-            sums_bgr.y / pixels_in_cluster,
-            sums_bgr.z / pixels_in_cluster
+                sums_bgr.x / pixels_in_cluster,
+                sums_bgr.y / pixels_in_cluster,
+                sums_bgr.z / pixels_in_cluster
         );
         if (method == center_update_method.mean) {
             return new pixel(-1, -1, mean);
@@ -342,14 +321,14 @@ public class math_util {
     }
 
     public static segmentation_result ordinary_k_means(
-        Mat input_image, int K, int iteration_count, center_init_method method, Mat input_markup
+            Mat input_image, int K, int iteration_count, center_init_method method, Mat input_markup
     ) {
         Mat centers_labels = new Mat(input_image.rows(), input_image.cols(), CvType.CV_8UC1);
         List<pixel> centers =
                 method == center_init_method.RANDOM ? pick_random_centers(input_image, K) :
-                method == center_init_method.PLUS_PLUS ? pick_plus_plus_centers(input_image, K) :
-                method == center_init_method.PAPER ? pick_paper_centers(input_image, K) :
-                pick_random_centers(input_image, K);
+                        method == center_init_method.PLUS_PLUS ? pick_plus_plus_centers(input_image, K) :
+                                method == center_init_method.PAPER ? pick_paper_centers(input_image, K) :
+                                        pick_random_centers(input_image, K);
 
         List<Double> iteration_errors = new ArrayList<>();
         List<Long> processing_times = new ArrayList<>();
@@ -388,7 +367,7 @@ public class math_util {
             // Переупорядочиваем центры меток так, чтобы нулевой кластер был кластером бумаги
             make_paper_center_first(centers, centers_labels, K);
             // Считаем ошибку на этой итерации
-            iteration_errors.add(calculate_error(centers_labels, K, input_markup));
+            if (input_markup != null) iteration_errors.add(calculate_error(centers_labels, K, input_markup));
         }
         return new segmentation_result(centers_labels, centers, iteration_errors, processing_times);
     }
@@ -400,9 +379,9 @@ public class math_util {
         Mat centers_labels = new Mat(input_image.rows(), input_image.cols(), CvType.CV_8SC1);
         List<pixel> centers =
                 method == center_init_method.RANDOM ? pick_random_centers(input_image, K) :
-                method == center_init_method.PLUS_PLUS ? pick_plus_plus_centers(input_image, K) :
-                method == center_init_method.PAPER ? pick_paper_centers(input_image, K) :
-                pick_random_centers(input_image, K);
+                        method == center_init_method.PLUS_PLUS ? pick_plus_plus_centers(input_image, K) :
+                                method == center_init_method.PAPER ? pick_paper_centers(input_image, K) :
+                                        pick_random_centers(input_image, K);
         PriorityQueue<queue_object> queue = new PriorityQueue<>();
 
         List<Double> iteration_errors = new ArrayList<>();
@@ -445,7 +424,7 @@ public class math_util {
             // Переупорядочиваем центры меток так, чтобы нулевой кластер был кластером бумаги
             make_paper_center_first(centers, centers_labels, K);
             // Считаем ошибку на этой итерации
-            iteration_errors.add(calculate_error(centers_labels, K, input_markup));
+            if (input_markup != null) iteration_errors.add(calculate_error(centers_labels, K, input_markup));
         }
         return new segmentation_result(centers_labels, centers, iteration_errors, processing_times);
     }

@@ -3,4 +3,7 @@ FROM openjdk@sha256:0ba030330f545cf9697892423b1d8720be46e38f85045a483cd2b12126f1
 WORKDIR /segmentation_app
 COPY build/libs/segmentation_app-1.0.0.jar .
 EXPOSE 8080
+RUN apt-get update
+RUN apt-get -y install coreutils iputils-ping telnet iproute2
+RUN apt-get -y install libxext6 libxrender1 libxtst6 libfreetype6 fontconfig
 ENTRYPOINT ["java", "-Xms1024m", "-Xmx4g", "--enable-native-access=ALL-UNNAMED", "-jar", "segmentation_app-1.0.0.jar"]

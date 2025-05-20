@@ -30,6 +30,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.38")
     annotationProcessor("org.projectlombok:lombok:1.18.38")
     runtimeOnly("org.postgresql:postgresql:42.7.5")
+    implementation("org.apache.commons:commons-lang3:3.17.0")
 }
 
 

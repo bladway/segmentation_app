@@ -10,31 +10,27 @@ import java.util.List;
 @NoArgsConstructor
 @Data
 public class image {
-    public image(byte[] image_raw, byte[] markup_raw, int height, int width) {
-        this.image_raw = image_raw;
-        this.markup_raw = markup_raw;
-        this.image_height = height;
-        this.image_width = width;
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private long image_id;
-
+    @Column(name = "image_id")
+    private long imageId;
     @Lob
-    @Column(nullable = false)
-    private byte[] image_raw;
-
+    @Column(name = "image_raw", nullable = false)
+    private byte[] imageRaw;
     @Lob
-    @Column
-    private byte[] markup_raw;
+    @Column(name = "markup_raw")
+    private byte[] markupRaw;
+    @Column(name = "image_height", nullable = false)
+    private int imageHeight;
+    @Column(name = "image_width", nullable = false)
+    private int imageWidth;
+    @OneToMany(mappedBy = "originalImage", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<image_processed> imagesProcessed;
 
-    @Column(nullable = false)
-    private int image_height;
-
-    @Column(nullable = false)
-    private int image_width;
-
-    @OneToMany(mappedBy = "original_image", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<image_processed> images_processed;
+    public image(byte[] image_raw, byte[] markup_raw, int height, int width) {
+        this.imageRaw = image_raw;
+        this.markupRaw = markup_raw;
+        this.imageHeight = height;
+        this.imageWidth = width;
+    }
 }
