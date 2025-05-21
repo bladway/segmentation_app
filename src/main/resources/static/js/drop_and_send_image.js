@@ -1,48 +1,48 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const drop_zone = document.getElementById("drop-zone");
-    const send_button = document.getElementById("send-button");
-    const input_field = document.getElementById("input-file");
-    const img_container = document.getElementById("img-container");
+document.addEventListener('DOMContentLoaded', function () {
+    const dropZone = document.getElementById('drop-zone');
+    const sendButton = document.getElementById('send-button');
+    const inputField = document.getElementById('input-file');
+    const imgContainer = document.getElementById('img-container');
 
-    function handle_drag_over(e) {
+    function handleDragOver(e) {
         e.preventDefault();
     }
 
-    function update_button_state() {
-        send_button.disabled = !(input_field.files && input_field.files.length > 0);
+    function updateButtonState() {
+        sendButton.disabled = !(inputField.files && inputField.files.length > 0);
     }
 
-    function update_image_state() {
-        while (img_container.firstChild) {
-            img_container.removeChild(img_container.lastChild);
+    function updateImageState() {
+        while (imgContainer.firstChild) {
+            imgContainer.removeChild(imgContainer.lastChild);
         }
-        if (input_field.files.length > 0) {
-            Array.from(input_field.files).forEach((file, index) => {
-                const objectUrl = URL.createObjectURL(file); // Temporary reference to the image
-                const sub_div = document.createElement('div');
-                sub_div.className = 'sub-div';
-                sub_div.style.backgroundImage = `url("${objectUrl}")`;
-                img_container.appendChild(sub_div);
+        if (inputField.files.length > 0) {
+            Array.from(inputField.files).forEach((file, index) => {
+                const objectUrl = URL.createObjectURL(file);
+                const subDiv = document.createElement('div');
+                subDiv.className = 'sub-div';
+                subDiv.style.backgroundImage = `url('${objectUrl}')`;
+                imgContainer.appendChild(subDiv);
             });
         }
     }
 
-    drop_zone.addEventListener("dragenter", handle_drag_over);
+    dropZone.addEventListener('dragenter', handleDragOver);
 
-    drop_zone.addEventListener("dragover", handle_drag_over);
+    dropZone.addEventListener('dragover', handleDragOver);
 
-    drop_zone.addEventListener("drop", e => {
+    dropZone.addEventListener('drop', e => {
         e.preventDefault();
         if (e.dataTransfer.files.length > 0) {
-            input_field.files = e.dataTransfer.files;
-            update_button_state();
-            update_image_state();
+            inputField.files = e.dataTransfer.files;
+            updateButtonState();
+            updateImageState();
         }
     });
 
-    input_field.addEventListener("change", () => {
-        update_button_state();
-        update_image_state();
+    inputField.addEventListener('change', () => {
+        updateButtonState();
+        updateImageState();
     });
 
 });

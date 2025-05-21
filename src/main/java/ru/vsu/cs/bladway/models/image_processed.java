@@ -17,8 +17,11 @@ public class image_processed {
     @Column(name = "image_processed_id")
     private long imageProcessedId;
     @Lob
-    @Column(name = "image_processed_raw", nullable = false)
-    private byte[] imageProcessedRaw;
+    @Column(name = "image_processed_labels", nullable = false)
+    private byte[] imageProcessedLabels;
+    @Lob
+    @Column(name = "image_processed_segments", nullable = false)
+    private byte[] imageProcessedSegments;
     @Column(name = "k_value", nullable = false)
     private int kValue;
     @Column(name = "iteration_count", nullable = false)
@@ -44,6 +47,7 @@ public class image_processed {
     private List<Long> imageProcessingTimes;
 
     public image_processed(
+            byte[] imageProcessedLabels,
             byte[] image_processed_raw,
             Integer k_value,
             Integer iteration_count,
@@ -53,7 +57,8 @@ public class image_processed {
             List<Double> image_iteration_errors,
             List<Long> image_processing_times
     ) {
-        this.imageProcessedRaw = image_processed_raw;
+        this.imageProcessedLabels = imageProcessedLabels;
+        this.imageProcessedSegments = image_processed_raw;
         this.kValue = k_value;
         this.iterationCount = iteration_count;
         this.centerInitMethod = center_init_method;

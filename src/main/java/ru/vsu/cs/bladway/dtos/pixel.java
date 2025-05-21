@@ -13,6 +13,7 @@ public class pixel {
     public Double b;
     public Double g;
     public Double r;
+
     public pixel(Integer y, Integer x, double[] bgr) {
         this.y = y;
         this.x = x;
@@ -20,6 +21,7 @@ public class pixel {
         this.g = bgr[1];
         this.r = bgr[2];
     }
+
     public pixel(Integer y, Integer x, Point3 bgr) {
         this.y = y;
         this.x = x;
@@ -27,6 +29,7 @@ public class pixel {
         this.g = bgr.y;
         this.r = bgr.z;
     }
+
     public pixel(Integer y, Integer x, Mat input_image) {
         this(y, x, input_image.get(y, x));
     }

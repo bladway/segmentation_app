@@ -7,9 +7,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import ru.vsu.cs.bladway.controllers.segmentation_app_controller;
+import ru.vsu.cs.bladway.enums.center_init_method;
+import ru.vsu.cs.bladway.enums.segmentation_method;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 @SpringBootApplication(scanBasePackages = {"ru.vsu.cs.bladway"})
 @EntityScan("ru.vsu.cs.bladway.models")
@@ -35,6 +40,14 @@ public class segmentation_app {
     public final static int k_min = 2;
 
     public final static int k_max = 5;
+
+    public final static Set<center_init_method> center_init_methods = new HashSet<>(List.of(
+            center_init_method.RANDOM, center_init_method.PLUS_PLUS, center_init_method.PAPER
+    ));
+
+    public final static Set<segmentation_method> segmentation_methods = new HashSet<>(List.of(
+            segmentation_method.ORDINARY_K_MEANS, segmentation_method.CONSTRAINTS_K_MEDOIDS
+    ));
 
     public final static Scalar[] colors = new Scalar[]{
             new Scalar(0, 0, 255),
@@ -66,13 +79,15 @@ public class segmentation_app {
                 images_dataset
         );
         dataset_saved = true;
-		/*controller.process_dataset(
+        /*controller.process_dataset(
 				iteration_count,
 				passage_count,
 				images_dataset_min,
 				images_dataset_max,
 				k_min,
-				k_max
+				k_max,
+                center_init_methods,
+                segmentation_methods
 		);
 		controller.show_dataset_charts(
 				iteration_count,
@@ -80,7 +95,9 @@ public class segmentation_app {
 				images_dataset_min,
 				images_dataset_max,
 				k_min,
-				k_max
+				k_max,
+                center_init_methods,
+                segmentation_methods
 		);*/
     }
 

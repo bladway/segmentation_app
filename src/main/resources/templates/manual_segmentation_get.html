@@ -1,0 +1,85 @@
+<!DOCTYPE HTML>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Segmentation App Manual processing</title>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="/js/drop_image_chose_points_send_image.js"></script>
+    <style>
+        #body {
+            background: linear-gradient(cyan, lightgoldenrodyellow);
+        }
+
+        #drop-zone {
+            height: 100%;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.38);
+            cursor: pointer;
+            border-radius: 20px;
+        }
+
+        #img-drop {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            border: 2px dashed black;
+            background: wheat;
+        }
+
+        #img-drop img {
+            width: 100px;
+            margin-top: 20px;
+        }
+
+        .fullscreen-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.8); /* полупрозрачная подложка */
+        }
+
+        .fullscreen-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            cursor: crosshair; /* удобный курсор для выбора пикселей */
+        }
+
+        .buttons-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+<div th:insert="~{fragments/header.html :: header}"></div>
+<div class="d-flex justify-content-center align-items-center min-vh-100 flex-column" id="body">
+    <h1 class="mb-4">Drop the image and choose segments to delete from image</h1>
+    <form action="/manual_segmentation" class="w-100 text-center align-items-center d-flex flex-column" enctype="multipart/form-data"
+          id="form"
+          method="post">
+        <label class="alert alert-info w-75 mx-auto mb-3" id="drop-zone">
+            <input accept="image/*" hidden id="input-file" name="image" type="file"/>
+            <div id="img-drop">
+                <img src="/img/drop.png">
+                <p>Drag and drop or click here to upload image...</p>
+            </div>
+        </label>
+        <div class="fullscreen-container" id="fullscreen-container">
+            <img alt="Uploaded Image" class="fullscreen-image" id="fullscreen-image"/>
+            <div class="buttons-container">
+                <button class="btn btn-danger mr-2" id="clear-button" type="button">Clear</button>
+                <button class="btn btn-success ml-2" id="send-button" type="button">Send</button>
+            </div>
+        </div>
+    </form>
+</div>
+</body>
+</html>

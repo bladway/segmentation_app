@@ -6,13 +6,17 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
+import ru.vsu.cs.bladway.dtos.pixel;
+import ru.vsu.cs.bladway.dtos.point;
 import ru.vsu.cs.bladway.dtos.segmentation_result;
 import ru.vsu.cs.bladway.enums.center_init_method;
 import ru.vsu.cs.bladway.enums.segmentation_method;
@@ -47,15 +51,6 @@ public class segmentation_app_controller {
         );
     }
 
-    public Mat read_image(image_processed image_processed) {
-        if (image_processed == null) return null;
-        byte[] image_raw = image_processed.getImageProcessedRaw();
-        return Imgcodecs.imdecode(
-                new MatOfByte(image_raw),
-                Imgcodecs.IMREAD_UNCHANGED
-        );
-    }
-
     public Mat read_markup(image image) {
         if (image == null) return null;
         byte[] markup_raw = image.getMarkupRaw();
@@ -65,37 +60,49 @@ public class segmentation_app_controller {
         return binary_markup;
     }
 
-    public image write_image(Mat image, Mat markup) {
-        MatOfByte image_buffer = new MatOfByte();
-        MatOfByte markup_buffer = new MatOfByte();
-        Imgcodecs.imencode("." + images_extension, image, image_buffer);
-        Imgcodecs.imencode("." + images_extension, markup, markup_buffer);
-        return image_repository
-                .save(new image(image_buffer.toArray(), markup_buffer.toArray(), image.rows(), image.cols()));
-    }
-
-    public image write_image(BufferedImage image, BufferedImage markup) throws IOException {
-        ByteArrayOutputStream image_stream = new ByteArrayOutputStream();
-        ByteArrayOutputStream markup_stream = new ByteArrayOutputStream();
-        int height = 0;
-        int width = 0;
-        if (image != null) {
-            ImageIO.write(image, images_extension, image_stream);
-            height = image.getHeight();
-            width = image.getWidth();
-        }
-        if (markup != null) {
-            ImageIO.write(markup, images_extension, markup_stream);
-        }
-        return image_repository.save(new image(
-                image_stream.toByteArray(),
-                markup_stream.toByteArray(),
-                height,
-                width)
+    public Mat read_image(image_processed image_processed) {
+        if (image_processed == null) return null;
+        byte[] image_byte = image_processed.getImageProcessedSegments();
+        return Imgcodecs.imdecode(
+                new MatOfByte(image_byte),
+                Imgcodecs.IMREAD_UNCHANGED
         );
     }
 
+    public Mat read_labels(image_processed image_processed) {
+        if (image_processed == null) return null;
+        byte[] image_byte = image_processed.getImageProcessedLabels();
+        return Imgcodecs.imdecode(new MatOfByte(image_byte), Imgcodecs.IMREAD_GRAYSCALE);
+    }
+
+    public byte[] read_image(Mat image) {
+        if (image == null) return null;
+        MatOfByte image_buffer = new MatOfByte();
+        Imgcodecs.imencode("." + images_extension, image, image_buffer);
+        return image_buffer.toArray();
+    }
+
+    public byte[] read_image(BufferedImage image) throws IOException {
+        if (image == null) return null;
+        ByteArrayOutputStream image_stream = new ByteArrayOutputStream();
+        ImageIO.write(image, images_extension, image_stream);
+        return image_stream.toByteArray();
+    }
+
+    public image write_image(Mat image, Mat markup) {
+        byte[] image_byte = read_image(image);
+        byte[] markup_byte = read_image(markup);
+        return image_repository.save(new image(image_byte, markup_byte, image.rows(), image.cols()));
+    }
+
+    public image write_image(BufferedImage image, BufferedImage markup) throws IOException {
+        byte[] image_byte = read_image(image);
+        byte[] markup_byte = read_image(markup);
+        return image_repository.save(new image(image_byte, markup_byte, image.getHeight(), image.getWidth()));
+    }
+
     public image_processed write_image_processed(
+            Mat centers_labels,
             Mat image_processed,
             int k_value,
             int iteration_count,
@@ -105,11 +112,11 @@ public class segmentation_app_controller {
             List<Double> image_iteration_error_rates,
             List<Long> image_processing_times
     ) {
-        MatOfByte buffer = new MatOfByte();
-        Imgcodecs.imencode("." + images_extension, image_processed, buffer);
-        byte[] image_processed_raw = buffer.toArray();
+        byte[] image_processed_centers_byte = read_image(centers_labels);
+        byte[] image_processed_segments_byte = read_image(image_processed);
         return image_processed_repository.save(new image_processed(
-                image_processed_raw,
+                image_processed_centers_byte,
+                image_processed_segments_byte,
                 k_value,
                 iteration_count,
                 center_init_method,
@@ -142,13 +149,15 @@ public class segmentation_app_controller {
             long images_dataset_min,
             long images_dataset_max,
             int k_min,
-            int k_max
+            int k_max,
+            Set<center_init_method> center_init_methods,
+            Set<segmentation_method> segmentation_methods
     ) throws IOException {
         for (int p = 1; p <= passage_count; p++) {
             for (long c = images_dataset_min; c <= images_dataset_max; c++) {
                 for (int k = k_min; k <= k_max; k++) {
-                    for (center_init_method ci_method : center_init_method.values()) {
-                        for (segmentation_method seg_method : segmentation_method.values()) {
+                    for (center_init_method ci_method : center_init_methods) {
+                        for (segmentation_method seg_method : segmentation_methods) {
                             image input_image = image_repository.findById(c).orElse(null);
                             Mat input_image_mat = read_image(input_image);
                             Mat input_markup_mat = read_markup(input_image);
@@ -156,7 +165,12 @@ public class segmentation_app_controller {
                             segmentation_result output;
                             if (seg_method == segmentation_method.ORDINARY_K_MEANS) {
                                 output = math_util.ordinary_k_means(
-                                        input_image_mat, k, iteration_count, ci_method, input_markup_mat
+                                        input_image_mat,
+                                        k,
+                                        iteration_count,
+                                        ci_method,
+                                        input_markup_mat,
+                                        null
                                 );
                                 // Рисуем отображение сегментов
                                 output_image_mat = math_util.draw_segments(
@@ -167,7 +181,12 @@ public class segmentation_app_controller {
                                 );
                             } else {
                                 output = math_util.constraints_k_medoids(
-                                        input_image_mat, k, iteration_count, ci_method, input_markup_mat
+                                        input_image_mat,
+                                        k,
+                                        iteration_count,
+                                        ci_method,
+                                        input_markup_mat,
+                                        null
                                 );
                                 // Рисуем отображение сегментов
                                 output_image_mat = math_util.draw_contours(
@@ -179,6 +198,7 @@ public class segmentation_app_controller {
 
                             // Сохраняем результат сегментации
                             write_image_processed(
+                                    output.centers_labels,
                                     output_image_mat,
                                     k,
                                     iteration_count,
@@ -202,14 +222,16 @@ public class segmentation_app_controller {
             long images_dataset_min,
             long images_dataset_max,
             int k_min,
-            int k_max
+            int k_max,
+            Set<center_init_method> center_init_methods,
+            Set<segmentation_method> segmentation_methods
     ) throws IOException {
         for (long c = images_dataset_min; c <= images_dataset_max; c++) {
             for (int k = k_min; k <= k_max; k++) {
                 Map<Pair<center_init_method, segmentation_method>, Double[]> error_data = new HashMap<>();
                 Map<Pair<center_init_method, segmentation_method>, Double[]> time_data = new HashMap<>();
-                for (center_init_method ci_method : center_init_method.values()) {
-                    for (segmentation_method seg_method : segmentation_method.values()) {
+                for (center_init_method ci_method : center_init_methods) {
+                    for (segmentation_method seg_method : segmentation_methods) {
                         List<image_processed> images_processed = image_processed_repository
                                 .findAllBykValueAndOriginalImageAndCenterInitMethodAndSegmentationMethod(
                                         k,
@@ -253,7 +275,6 @@ public class segmentation_app_controller {
     private String home_get(
             Model model
     ) {
-        model.addAttribute("name", "bladway");
         return "home_get";
     }
 
@@ -274,17 +295,17 @@ public class segmentation_app_controller {
             @RequestParam("images") List<MultipartFile> images
     ) throws IOException {
         if (!dataset_saved) return "auto_segmentation_get";
-        List<List<byte[]>> images_processed = new ArrayList<>();
+        List<List<String>> images_processed_base64 = new ArrayList<>();
         for (int m = 0; m < images.size(); m++) {
-            images_processed.add(new ArrayList<>());
-            image image = write_image(
+            images_processed_base64.add(new ArrayList<>());
+            image image_db = write_image(
                     ImageIO.read(Objects.requireNonNull(images.get(m).getInputStream())),
                     null
             );
-            Mat image_mat = read_image(image);
+            Mat image_mat = read_image(image_db);
             for (int k = k_min; k <= k_max; k++) {
                 segmentation_result output = math_util.constraints_k_medoids(
-                        image_mat, k, iteration_count, center_init_method.PAPER, null
+                        image_mat, k, iteration_count, center_init_method.PAPER, null, null
                 );
                 // Рисуем отображение сегментов
                 Mat output_image_mat = math_util.draw_contours(
@@ -293,50 +314,78 @@ public class segmentation_app_controller {
                         k
                 );
                 // Сохраняем результат сегментации
-                image_processed image_processed = write_image_processed(
+                write_image_processed(
+                        output.centers_labels,
                         output_image_mat,
                         k,
                         iteration_count,
                         center_init_method.PAPER,
                         segmentation_method.CONSTRAINTS_K_MEDOIDS,
-                        image,
+                        image_db,
                         output.iteration_errors,
                         output.processing_times
                 );
-                images_processed.get(m).add(image_processed.getImageProcessedRaw());
+                images_processed_base64.get(m).add(
+                        Base64.getEncoder()
+                                .encodeToString(read_image(math_util.cut_edges(image_mat, output.centers_labels, k))));
             }
         }
-        model.addAttribute("images_processed", images_processed);
+        model.addAttribute("images_processed_base64", images_processed_base64);
         return "auto_segmentation_post";
     }
 
     @GetMapping(
             value = "/manual_segmentation"
     )
-    private String manual_segmentation(
+    private String manual_segmentation_get(
             Model model
     ) {
         return "manual_segmentation_get";
     }
 
-
-    /*@PostMapping(
-            value = "/process",
-            consumes = {MediaType.MULTIPART_FORM_DATA_VALUE}
+    @PostMapping(
+            value = "/manual_segmentation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    private String processKMeansRequest(
-            @RequestPart MultipartFile image,
-            @RequestPart int K
-    ) {
+    private String manual_segmentation_post(
+            Model model,
+            @RequestPart("image") MultipartFile image,
+            @RequestParam("points") List<point> points
+    ) throws IOException {
+        if (!dataset_saved) return "manual_segmentation_get";
+        String image_processed_base64;
+        image image_db = write_image(
+                ImageIO.read(Objects.requireNonNull(image.getInputStream())),
+                null
+        );
+        Mat image_mat = read_image(image_db);
+        List<pixel> set_centers = new ArrayList<>();
+        points.forEach(point -> set_centers.add(new pixel(point.y, point.x, image_mat.get(point.y, point.x))));
+        segmentation_result output = math_util.constraints_k_medoids(
+                image_mat, set_centers.size(), iteration_count, center_init_method.SET, null, set_centers
+        );
+        // Рисуем отображение сегментов
+        Mat output_image_mat = math_util.draw_contours(
+                image_mat,
+                output.centers_labels,
+                set_centers.size()
+        );
+        // Сохраняем результат сегментации
+        write_image_processed(
+                output.centers_labels,
+                output_image_mat,
+                set_centers.size(),
+                iteration_count,
+                center_init_method.SET,
+                segmentation_method.CONSTRAINTS_K_MEDOIDS,
+                image_db,
+                output.iteration_errors,
+                output.processing_times
+        );
+        image_processed_base64 = Base64.getEncoder().encodeToString(
+                read_image(math_util.cut_edges(image_mat, output.centers_labels, set_centers.size())));
+        model.addAttribute("image_processed_base64", image_processed_base64);
+        return "manual_segmentation_post"; // TODO доделать вот этот шаблон и передачу точек в get странице
+    }
 
-        Object body;
-        HttpHeaders headers = new HttpHeaders();
-        HttpStatus status;
-
-        body = processWork(image, K);
-
-        return
-
-    }*/
 
 }

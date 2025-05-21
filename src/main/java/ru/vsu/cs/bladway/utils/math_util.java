@@ -110,13 +110,10 @@ public class math_util {
                     for (int x = 0; x < input_image.cols(); x++) {
                         double min_distance_to_any_defined_center = Double.MAX_VALUE;
                         for (int l = 0; l < k; l++) {
-                            double distance_to_current_centroid = find_color_distance(
+                            min_distance_to_any_defined_center = Math.min(find_color_distance(
                                     centers.get(l),
                                     new Point3(input_image.get(y, x))
-                            );
-                            if (distance_to_current_centroid < min_distance_to_any_defined_center) {
-                                min_distance_to_any_defined_center = distance_to_current_centroid;
-                            }
+                            ), min_distance_to_any_defined_center);
                         }
                         if (min_distance_to_any_defined_center > max_global_distance_to_any_defined_center) {
                             max_global_distance_to_any_defined_center = min_distance_to_any_defined_center;
@@ -307,28 +304,40 @@ public class math_util {
         swap_values(centers_labels, 0, paper_cluster_index);
     }
 
-    private static double calculate_error(Mat centers_labels, int K, Mat expected_markup) {
+    private static Mat get_calculated_markup(Mat centers_labels, int K) {
         Mat calculated_markup = new Mat();
         centers_labels.copyTo(calculated_markup);
         // Заменяем в рассчитанной маске все сегменты не нулевого на 255
         for (int k = 1; k < K; k++) {
             replace_values(calculated_markup, k, 255);
         }
+        return calculated_markup;
+    }
+
+    private static double calculate_error(Mat centers_labels, int K, Mat expected_markup) {
+        Mat calculated_markup = get_calculated_markup(centers_labels, K);
         Mat correct_binary_mask = new Mat();
         Core.compare(calculated_markup, expected_markup, correct_binary_mask, Core.CMP_EQ);
-        double correct = Core.sumElems(correct_binary_mask).val[0] / 255 / centers_labels.rows() / centers_labels.cols();
+        double correct = Core.sumElems(correct_binary_mask).val[0]
+                / 255 / centers_labels.rows() / centers_labels.cols();
         return 1 - correct;
     }
 
     public static segmentation_result ordinary_k_means(
-            Mat input_image, int K, int iteration_count, center_init_method method, Mat input_markup
+            Mat input_image,
+            int K,
+            int iteration_count,
+            center_init_method method,
+            Mat input_markup,
+            List<pixel> set_centers
     ) {
         Mat centers_labels = new Mat(input_image.rows(), input_image.cols(), CvType.CV_8UC1);
         List<pixel> centers =
                 method == center_init_method.RANDOM ? pick_random_centers(input_image, K) :
                         method == center_init_method.PLUS_PLUS ? pick_plus_plus_centers(input_image, K) :
                                 method == center_init_method.PAPER ? pick_paper_centers(input_image, K) :
-                                        pick_random_centers(input_image, K);
+                                        method == center_init_method.SET ? set_centers :
+                                                pick_random_centers(input_image, K);
 
         List<Double> iteration_errors = new ArrayList<>();
         List<Long> processing_times = new ArrayList<>();
@@ -341,7 +350,7 @@ public class math_util {
             for (int y = 0; y < input_image.rows(); y++) {
                 for (int x = 0; x < input_image.cols(); x++) {
                     double min_distance = Double.MAX_VALUE;
-                    int minDistanceCenterIndex = -1;
+                    int min_distance_center = -1;
                     for (int k = 0; k < centers.size(); k++) {
                         double distance = find_color_distance(
                                 centers.get(k),
@@ -349,10 +358,10 @@ public class math_util {
                         );
                         if (distance < min_distance) {
                             min_distance = distance;
-                            minDistanceCenterIndex = k;
+                            min_distance_center = k;
                         }
                     }
-                    centers_labels.put(y, x, minDistanceCenterIndex);
+                    centers_labels.put(y, x, min_distance_center);
                 }
             }
             // Высчитываем новое положение каждого центра
@@ -374,14 +383,20 @@ public class math_util {
 
 
     public static segmentation_result constraints_k_medoids(
-            Mat input_image, int K, int iteration_count, center_init_method method, Mat input_markup
+            Mat input_image,
+            int K,
+            int iteration_count,
+            center_init_method method,
+            Mat input_markup,
+            List<pixel> set_centers
     ) {
         Mat centers_labels = new Mat(input_image.rows(), input_image.cols(), CvType.CV_8SC1);
         List<pixel> centers =
                 method == center_init_method.RANDOM ? pick_random_centers(input_image, K) :
                         method == center_init_method.PLUS_PLUS ? pick_plus_plus_centers(input_image, K) :
                                 method == center_init_method.PAPER ? pick_paper_centers(input_image, K) :
-                                        pick_random_centers(input_image, K);
+                                        method == center_init_method.SET ? set_centers :
+                                                pick_random_centers(input_image, K);
         PriorityQueue<queue_object> queue = new PriorityQueue<>();
 
         List<Double> iteration_errors = new ArrayList<>();
@@ -463,6 +478,28 @@ public class math_util {
             );
         }
         return output_image;
+    }
+
+    public static Mat cut_edges(Mat input_image, Mat centers_labels, int K) {
+        Mat calculated_markup = get_calculated_markup(centers_labels, K);
+        Mat whole_result_image = input_image.clone();
+        whole_result_image.setTo(new Scalar(255, 255, 255), calculated_markup);
+        // Нахождение минимальной и максимальной границы значащих пикселей
+        int min_y = Integer.MAX_VALUE;
+        int max_y = Integer.MIN_VALUE;
+        int min_x = Integer.MAX_VALUE;
+        int max_x = Integer.MIN_VALUE;
+        for (int y = 0; y < calculated_markup.rows(); ++y) {
+            for (int x = 0; x < calculated_markup.cols(); ++x) {
+                if ((int) calculated_markup.get(y, x)[0] == 0) { // Значимая точка
+                    min_x = Math.min(min_x, x);
+                    min_y = Math.min(min_y, y);
+                    max_x = Math.max(max_x, x);
+                    max_y = Math.max(max_y, y);
+                }
+            }
+        }
+        return whole_result_image.submat(min_y, max_y, min_x, max_x);
     }
 
 }
