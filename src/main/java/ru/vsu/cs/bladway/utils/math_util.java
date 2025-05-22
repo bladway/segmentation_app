@@ -60,6 +60,71 @@ public class math_util {
         mat.setTo(new Scalar(y), x_binary_mask);
     }
 
+    private static pixel find_new_center(Mat input_image, Mat binary_center_mask, center_update_method method) {
+        Point3 sums_bgr = new Point3(0, 0, 0);
+        long pixels_in_cluster = 0L;   // Количество пикселей в данном кластере
+        // Проходим по каждому пикселю изображения и собираем информацию о кластере
+        for (int y = 0; y < input_image.rows(); ++y) {
+            for (int x = 0; x < input_image.cols(); ++x) {
+                // Если пиксель принадлежит данному центру
+                if ((int) binary_center_mask.get(y, x)[0] != 0) {
+                    Point3 pixel_bgr = new Point3(input_image.get(y, x));
+                    // Складываем данные по компонентам RGB
+                    sums_bgr.x += pixel_bgr.x;
+                    sums_bgr.y += pixel_bgr.y;
+                    sums_bgr.z += pixel_bgr.z;
+                    pixels_in_cluster++;
+                }
+            }
+        }
+        // Среднее значение цветов кластера
+        Point3 mean = new Point3(
+                sums_bgr.x / pixels_in_cluster,
+                sums_bgr.y / pixels_in_cluster,
+                sums_bgr.z / pixels_in_cluster
+        );
+        if (method == center_update_method.mean) {
+            return new pixel(-1, -1, mean);
+        }
+        // Теперь найдем пиксель, наиболее близкий к этому среднему значению
+        pixel medoid = null;
+        double min_distance = Double.MAX_VALUE;
+        // Находим пиксель с минимальным расстоянием
+        for (int y = 0; y < input_image.rows(); ++y) {
+            for (int x = 0; x < input_image.cols(); ++x) {
+                // Если пиксель принадлежит данному кластеру
+                if ((int) binary_center_mask.get(y, x)[0] != 0) {
+                    Point3 pixel_bgr = new Point3(input_image.get(y, x));
+                    double distance = find_color_distance(mean, pixel_bgr);
+                    if (distance < min_distance) {
+                        min_distance = distance;
+                        medoid = new pixel(y, x, pixel_bgr);
+                    }
+                }
+            }
+        }
+        return medoid;
+    }
+
+    public static pixel pick_window_center(Mat image) {
+        // Первым центром берем пиксель из центральной части изображения, наиболее похожий на существующие
+        int window_start_row = (int) (image.rows() * (0.5 - center_window_size / 2));
+        int window_end_row = (int) (image.rows() * (0.5 + center_window_size / 2));
+        int window_start_col = (int) (image.cols() * (0.5 - center_window_size / 2));
+        int window_end_col = (int) (image.cols() * (0.5 + center_window_size / 2));
+        Mat window_input_image = image.submat(window_start_row, window_end_row, window_start_col, window_end_col);
+        Mat window_binary_center_mask = new Mat(
+                window_input_image.rows(),
+                window_input_image.cols(),
+                CvType.CV_8UC1
+        ).setTo(new Scalar(255));
+        pixel center = find_new_center(window_input_image, window_binary_center_mask, center_update_method.medoid);
+        // Сдвиг пикселей, чтобы значения соответствовали входному изображению
+        center.y += window_start_row;
+        center.x += window_start_col;
+        return center;
+    }
+
     private static List<pixel> pick_random_centers(Mat input_image, int K) {
         // Случайная инициализация центров
         List<pixel> centers = new ArrayList<>();
@@ -136,21 +201,8 @@ public class math_util {
     private static List<pixel> pick_paper_centers(Mat input_image, int K) {
         // Инициализация центров с помощью окна и угловых пикселей
         List<pixel> centers = new ArrayList<>();
-        // Первым центром берем пиксель из центральной части изображения, наиболее похожий на существующие
-        int window_start_row = (int) (input_image.rows() * (0.5 - center_window_size / 2));
-        int window_end_row = (int) (input_image.rows() * (0.5 + center_window_size / 2));
-        int window_start_col = (int) (input_image.cols() * (0.5 - center_window_size / 2));
-        int window_end_col = (int) (input_image.cols() * (0.5 + center_window_size / 2));
-        Mat window_input_image = input_image.submat(window_start_row, window_end_row, window_start_col, window_end_col);
-        Mat window_binary_center_mask = new Mat(
-                window_input_image.rows(),
-                window_input_image.cols(),
-                CvType.CV_8UC1
-        ).setTo(new Scalar(255));
-        centers.add(find_new_center(window_input_image, window_binary_center_mask, center_update_method.medoid));
-        // Сдвиг пикселей, чтобы значения соответствовали входному изображению
-        centers.getFirst().y += window_start_row;
-        centers.getFirst().x += window_start_col;
+        // Первый пиксель берется из окна
+        centers.add(pick_window_center(input_image));
         // Все остальные сегменты берем начиная с угловых частей изображения
         int div = (K - 1) / 4;
         int mod = (K - 1) % 4;
@@ -234,52 +286,6 @@ public class math_util {
                     queue_object.center_index
             ));
         }
-    }
-
-    private static pixel find_new_center(Mat input_image, Mat binary_center_mask, center_update_method method) {
-        Point3 sums_bgr = new Point3(0, 0, 0);
-        long pixels_in_cluster = 0L;   // Количество пикселей в данном кластере
-        // Проходим по каждому пикселю изображения и собираем информацию о кластере
-        for (int y = 0; y < input_image.rows(); ++y) {
-            for (int x = 0; x < input_image.cols(); ++x) {
-                // Если пиксель принадлежит данному центру
-                if ((int) binary_center_mask.get(y, x)[0] != 0) {
-                    Point3 pixel_bgr = new Point3(input_image.get(y, x));
-                    // Складываем данные по компонентам RGB
-                    sums_bgr.x += pixel_bgr.x;
-                    sums_bgr.y += pixel_bgr.y;
-                    sums_bgr.z += pixel_bgr.z;
-                    pixels_in_cluster++;
-                }
-            }
-        }
-        // Среднее значение цветов кластера
-        Point3 mean = new Point3(
-                sums_bgr.x / pixels_in_cluster,
-                sums_bgr.y / pixels_in_cluster,
-                sums_bgr.z / pixels_in_cluster
-        );
-        if (method == center_update_method.mean) {
-            return new pixel(-1, -1, mean);
-        }
-        // Теперь найдем пиксель, наиболее близкий к этому среднему значению
-        pixel medoid = null;
-        double min_distance = Double.MAX_VALUE;
-        // Находим пиксель с минимальным расстоянием
-        for (int y = 0; y < input_image.rows(); ++y) {
-            for (int x = 0; x < input_image.cols(); ++x) {
-                // Если пиксель принадлежит данному кластеру
-                if ((int) binary_center_mask.get(y, x)[0] != 0) {
-                    Point3 pixel_bgr = new Point3(input_image.get(y, x));
-                    double distance = find_color_distance(mean, pixel_bgr);
-                    if (distance < min_distance) {
-                        min_distance = distance;
-                        medoid = new pixel(y, x, pixel_bgr);
-                    }
-                }
-            }
-        }
-        return medoid;
     }
 
     private static void make_paper_center_first(List<pixel> centers, Mat centers_labels, int K) {

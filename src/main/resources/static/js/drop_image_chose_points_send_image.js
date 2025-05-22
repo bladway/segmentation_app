@@ -1,72 +1,85 @@
 document.addEventListener('DOMContentLoaded', function () {
     const dropZone = document.getElementById('drop-zone');
     const inputField = document.getElementById('input-file');
+    const inputPoints = document.getElementById('input-points');
     const fullscreenContainer = document.getElementById('fullscreen-container');
     const fullscreenImage = document.getElementById('fullscreen-image');
     const clearButton = document.getElementById('clear-button');
-    const sendButton = document.getElementById('send-button');
-    let pointsArray = []; // Массив для хранения координат выбранных точек
+    const wrapper = document.getElementById('image-wrapper');
+    const reader = new FileReader();
+
+    function loadImageEvent(e) {
+        fullscreenImage.src = e.target.result;
+        fullscreenContainer.style.display = 'flex';
+        fullscreenImage.onload = function () {
+            fullscreenImage.dataset.realWidth = fullscreenImage.naturalWidth;
+            fullscreenImage.dataset.realHeight = fullscreenImage.naturalHeight;
+        };
+    }
+
+    function updatePointsInput() {
+        let points = [];
+        document.querySelectorAll('.point-marker')
+            .forEach(div => points.push(
+                {x: parseInt(div.dataset.normX), y: parseInt(div.dataset.normY)}));
+        inputPoints.value = JSON.stringify(points);
+    }
+
     function handleDragOver(e) {
         e.preventDefault();
     }
 
-    function loadFullScreenImage(file) {
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            fullscreenImage.src = event.target.result;
-            fullscreenImage.style.display = 'block';
-            fullscreenContainer.style.display = 'flex';
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function addPoint(x, y) {
-        const div = document.createElement('div');
-        div.className = 'point-marker';
-        div.style.position = 'absolute';
-        div.style.backgroundColor = 'red';
-        div.style.borderRadius = '50%';
-        div.style.width = '50px';
-        div.style.height = '50px';
-        div.style.transform = `translate(${x - 25}px, ${y - 25}px)`; // Центруем маркер над точкой
-        fullscreenContainer.appendChild(div);
-        pointsArray.push({x, y});
-    }
-
-    function clearAllPoints() {
-        while (fullscreenContainer.lastElementChild && fullscreenContainer.lastElementChild.classList.contains('point-marker')) {
-            fullscreenContainer.removeChild(fullscreenContainer.lastElementChild);
-        }
-        pointsArray = [];
-    }
-
-    function submitForm() {
-        const formData = new FormData(document.getElementById('form'));
-        formData.append('points', JSON.stringify(pointsArray)); // Добавляем список точек в форму
-        fetch('/manual_segmentation', {
-            method: 'POST',
-            body: formData,
-        })
-            .then((response) => response.json())
-            .then((data) => console.log(data)) // Логируем полученный ответ сервера
-            .catch((err) => console.error(err));
-    }
-
-    dropZone.addEventListener('dragenter', handleDragOver);
-    dropZone.addEventListener('dragover', handleDragOver);
-    dropZone.addEventListener('drop', (e) => {
+    function openImageOnDrop(e) {
         e.preventDefault();
         if (e.dataTransfer.files.length > 0) {
-            inputField.file = e.dataTransfer.files[0];
-            loadFullScreenImage(e.dataTransfer.files[0]); // Показываем полноэкранное изображение
+            inputField.files = e.dataTransfer.files;
+            reader.readAsDataURL(e.dataTransfer.files[0]);
         }
-    });
-    fullscreenImage.addEventListener('click', (e) => {
+    }
+
+    function openImageOnChoose() {
+        reader.readAsDataURL(inputField.files[0]);
+    }
+
+    function deletePointFromImage(e) {
+        e.preventDefault();
+        wrapper.removeChild(this);
+        updatePointsInput();
+    }
+
+    function addPointOnImage(e) {
         const rect = fullscreenImage.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        addPoint(x, y);
-    });
-    clearButton.addEventListener('click', clearAllPoints);
-    sendButton.addEventListener('click', submitForm);
+        const normX = Math.round((x / rect.width) * fullscreenImage.dataset.realWidth);
+        const normY = Math.round((y / rect.height) * fullscreenImage.dataset.realHeight);
+        const div = document.createElement('div');
+        const radius = 3;
+        div.className = 'point-marker';
+        div.style.position = 'absolute';
+        div.style.backgroundImage = 'linear-gradient(red, lightgoldenrodyellow)';
+        div.style.borderRadius = '50%';
+        div.style.width = 2 * radius + '%';
+        div.style.height = 2 * radius + '%';
+        div.style.left = (x / rect.width * 100) - radius + '%';
+        div.style.top = (y / rect.height * 100) - radius + '%';
+        div.dataset.normX = String(normX);
+        div.dataset.normY = String(normY);
+        div.addEventListener('contextmenu', deletePointFromImage);
+        wrapper.appendChild(div);
+        updatePointsInput();
+    }
+
+    function cleanAllPoints() {
+        document.querySelectorAll('.point-marker').forEach(el => el.remove());
+        updatePointsInput();
+    }
+
+    reader.addEventListener('load', loadImageEvent);
+    dropZone.addEventListener('dragenter', handleDragOver);
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('drop', openImageOnDrop);
+    inputField.addEventListener('change', openImageOnChoose);
+    fullscreenImage.addEventListener('click', addPointOnImage);
+    clearButton.addEventListener('click', cleanAllPoints);
 });

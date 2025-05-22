@@ -26,22 +26,19 @@
 <body>
 <div th:insert="~{fragments/header.html :: header}"></div>
 <div class="d-flex justify-content-center align-items-center min-vh-100 flex-column" id="body">
-    <h1 class="mb-4">Choose result images to download. We suggest some variants</h1>
-    <div class="container mt-5">
-        <div class="col g-4" th:each="images_var_k, stat_processed : ${images_processed_base64}">
-            <div class="card h-100 p-3 g-4" th:each="image_base_64, stat_var_k : ${images_var_k}">
-                <label class="form-check-label position-relative d-block w-100 h-100">
-                    <input class="position-absolute top-0 start-0 z-index-2 form-check-input m-2 checkbox"
-                           th:data-base64="${image_base_64}"
-                           type="checkbox" value="${stat_processed.index},${stat_var_k.index}"/>
-                    <img alt="Image Preview"
-                         class="object-fit-cover w-100 rounded img-thumbnail shadow-sm" th:src="'data:image/png;base64,' + ${image_base_64}"/>
-                </label>
-            </div>
-        </div>
+    <h1 class="mt-4">Download your image</h1>
+    <div class="container mt-5 card h-100 p-3 g-4">
+        <label class="form-check-label position-relative d-block w-100 h-100">
+            <input checked
+                   class="position-absolute top-0 start-0 z-index-2 form-check-input m-2 checkbox"
+                   hidden th:data-base64="${image_processed_base64}" type="checkbox"/>
+            <img alt="Image Preview"
+                 class="object-fit-cover w-100 rounded img-thumbnail shadow-sm"
+                 th:src="'data:image/png;base64,' + ${image_processed_base64}"/>
+        </label>
     </div>
-    <button class="btn btn-primary btn-lg my-4" id="button" onclick="saveSelectedImages()" type="button">Save Selected
-        Images
+    <button class="btn btn-primary btn-lg my-4" id="button" onclick="saveSelectedImages()" type="button">
+        Save Image
     </button>
 </div>
 </body>

@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
             imgContainer.removeChild(imgContainer.lastChild);
         }
         if (inputField.files.length > 0) {
-            Array.from(inputField.files).forEach((file, index) => {
+            Array.from(inputField.files).forEach((file) => {
                 const objectUrl = URL.createObjectURL(file);
                 const subDiv = document.createElement('div');
                 subDiv.className = 'sub-div';
@@ -27,22 +27,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    dropZone.addEventListener('dragenter', handleDragOver);
+    function updateButtonAndImageState() {
+        updateButtonState();
+        updateImageState();
+    }
 
-    dropZone.addEventListener('dragover', handleDragOver);
-
-    dropZone.addEventListener('drop', e => {
+    function loadImagesOnDrop(e) {
         e.preventDefault();
         if (e.dataTransfer.files.length > 0) {
             inputField.files = e.dataTransfer.files;
-            updateButtonState();
-            updateImageState();
+            updateButtonAndImageState()
         }
-    });
+    }
 
-    inputField.addEventListener('change', () => {
-        updateButtonState();
-        updateImageState();
-    });
-
+    dropZone.addEventListener('dragenter', handleDragOver);
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('drop', loadImagesOnDrop);
+    inputField.addEventListener('change', updateButtonAndImageState);
 });

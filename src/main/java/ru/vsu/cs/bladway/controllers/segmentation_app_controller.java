@@ -1,5 +1,7 @@
 package ru.vsu.cs.bladway.controllers;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.opencv.core.Mat;
@@ -13,7 +15,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 import ru.vsu.cs.bladway.dtos.pixel;
 import ru.vsu.cs.bladway.dtos.point;
@@ -344,14 +345,18 @@ public class segmentation_app_controller {
     }
 
     @PostMapping(
-            value = "/manual_segmentation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+            value = "/manual_segmentation",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     private String manual_segmentation_post(
             Model model,
-            @RequestPart("image") MultipartFile image,
-            @RequestParam("points") List<point> points
+            @RequestParam("image") MultipartFile image,
+            @RequestParam("points") String pointsJSON
     ) throws IOException {
         if (!dataset_saved) return "manual_segmentation_get";
+        ObjectMapper mapper = new ObjectMapper();
+        List<point> points = mapper.readValue(pointsJSON, new TypeReference<List<point>>() {
+        });
         String image_processed_base64;
         image image_db = write_image(
                 ImageIO.read(Objects.requireNonNull(image.getInputStream())),
@@ -359,7 +364,10 @@ public class segmentation_app_controller {
         );
         Mat image_mat = read_image(image_db);
         List<pixel> set_centers = new ArrayList<>();
+        // Добавляем центры обрезаемых сегментов
         points.forEach(point -> set_centers.add(new pixel(point.y, point.x, image_mat.get(point.y, point.x))));
+        // Добавляем центр сегмента бумаги
+        set_centers.add(math_util.pick_window_center(image_mat));
         segmentation_result output = math_util.constraints_k_medoids(
                 image_mat, set_centers.size(), iteration_count, center_init_method.SET, null, set_centers
         );
@@ -384,7 +392,7 @@ public class segmentation_app_controller {
         image_processed_base64 = Base64.getEncoder().encodeToString(
                 read_image(math_util.cut_edges(image_mat, output.centers_labels, set_centers.size())));
         model.addAttribute("image_processed_base64", image_processed_base64);
-        return "manual_segmentation_post"; // TODO доделать вот этот шаблон и передачу точек в get странице
+        return "manual_segmentation_post";
     }
 
 

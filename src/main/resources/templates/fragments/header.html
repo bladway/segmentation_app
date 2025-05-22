@@ -1,34 +1,20 @@
-<div th:fragment="header">
-    <nav class="navbar navbar-expand-md bg-dark sticky-top border-bottom" data-bs-theme="dark">
-        <div class="container">
-            <button aria-controls="offcanvas" aria-label="Toggle navigation" class="navbar-toggler"
-                    data-bs-target="#offcanvas"
-                    data-bs-toggle="offcanvas" type="button">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div aria-labelledby="offcanvasLabel" class="offcanvas offcanvas-end" id="offcanvas" tabindex="-1">
-                <div class="offcanvas-body">
-                    <ul class="navbar-nav flex-grow-1 justify-content-between">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/home">
-                                <i class="bi bi-cpu"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item"><a class="nav-link" href="/home">Home</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/auto_segmentation">Auto image processing</a>
-                        </li>
-                        <li class="nav-item"><a class="nav-link" href="/manual_segmentation">Manual image processing</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/home">
-                                <i class="bi bi-building"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
-</div>
-
+<nav class="navbar navbar-expand bg-dark sticky-top border-bottom" data-bs-theme="dark" th:fragment="header">
+    <div class="container d-flex justify-content-between">
+        <ul class="navbar-nav d-flex w-100 justify-content-evenly">
+            <li class="nav-item">
+                <a class="nav-link" href="/home">
+                    <i class="bi bi-cpu"></i>
+                </a>
+            </li>
+            <li class="nav-item"><a class="nav-link" href="/home">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="/auto_segmentation">Auto image processing</a></li>
+            <li class="nav-item"><a class="nav-link" href="/manual_segmentation">Manual image processing</a></li>
+            <li class="nav-item">
+                <a class="nav-link" href="/home">
+                    <i class="bi bi-building"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
