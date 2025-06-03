@@ -12,9 +12,10 @@ spring:
     hikari:
       connection-timeout: 60000
       maximum-pool-size: 80
+      auto-commit: false
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:

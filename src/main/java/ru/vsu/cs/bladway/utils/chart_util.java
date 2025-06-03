@@ -16,7 +16,6 @@ import org.opencv.core.Range;
 import org.opencv.imgcodecs.Imgcodecs;
 import ru.vsu.cs.bladway.enums.center_init_method;
 import ru.vsu.cs.bladway.enums.segmentation_method;
-import ru.vsu.cs.bladway.segmentation_app;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -29,9 +28,9 @@ import java.util.Map;
 
 @RequiredArgsConstructor
 public class chart_util {
-    public static void show_image(Mat imageMat, String title) {
+    public static void show_image(Mat image, String title) {
         MatOfByte imageMatOfByte = new MatOfByte();
-        Imgcodecs.imencode("." + segmentation_app.images_extension, imageMat, imageMatOfByte);
+        Imgcodecs.imencode(".png", image, imageMatOfByte);
 
         JFrame frame = new JFrame();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -44,22 +43,24 @@ public class chart_util {
         frame.pack();
     }
 
-    public static Mat get_iterations_errors_chart_image(
-            Map<Pair<center_init_method, segmentation_method>, Double[]> values,
-            String title
+    public static Mat get_ci_seg_methods_xy_chart_image(
+            Map<Pair<center_init_method, segmentation_method>, Double[][]> values,
+            String title,
+            String x_axis_label,
+            String y_axis_label
     ) throws IOException {
         XYSeriesCollection dataset = new XYSeriesCollection();
         for (Pair<center_init_method, segmentation_method> pair : values.keySet()) {
             XYSeries series = new XYSeries(pair.getKey() + " + " + pair.getValue());
-            for (int i = 0; i < values.get(pair).length; i++) {
-                series.add(i + 1, values.get(pair)[i]);
+            for (int i = 0; i < values.get(pair)[0].length; i++) {
+                series.add(values.get(pair)[0][i], values.get(pair)[1][i]);
             }
             dataset.addSeries(series);
         }
         JFreeChart chart = ChartFactory.createXYLineChart(
                 title,
-                "Итерация алгоритма",
-                "Величина ошибки",
+                x_axis_label,
+                y_axis_label,
                 dataset,
                 PlotOrientation.VERTICAL,
                 true,
@@ -76,21 +77,16 @@ public class chart_util {
         plot.getRangeAxis().setTickLabelFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
         LegendItemCollection old_legend_collection = plot.getLegendItems();
         LegendItemCollection new_legend_collection = new LegendItemCollection();
-        int idx = 0;
-        for (
-                LegendItem old_legend_item = old_legend_collection.get(idx);
-                old_legend_item != null;
-                old_legend_item = old_legend_collection.get(++idx)
-        ) {
+        for (int i = 0; i < old_legend_collection.getItemCount(); i++) {
             LegendItem new_legend_item = new LegendItem(
-                    old_legend_item.getLabel(), old_legend_item.getDescription(),
-                    old_legend_item.getToolTipText(), old_legend_item.getURLText(),
+                    old_legend_collection.get(i).getLabel(), old_legend_collection.get(i).getDescription(),
+                    old_legend_collection.get(i).getToolTipText(), old_legend_collection.get(i).getURLText(),
                     true, new Rectangle2D.Double(0, 0, 15, 15),
-                    true, old_legend_item.getFillPaint(),
-                    false, old_legend_item.getOutlinePaint(),
-                    old_legend_item.getOutlineStroke(), true,
-                    old_legend_item.getLine(), old_legend_item.getLineStroke(),
-                    old_legend_item.getLinePaint());
+                    true, old_legend_collection.get(i).getFillPaint(),
+                    false, old_legend_collection.get(i).getOutlinePaint(),
+                    old_legend_collection.get(i).getOutlineStroke(), true,
+                    old_legend_collection.get(i).getLine(), old_legend_collection.get(i).getLineStroke(),
+                    old_legend_collection.get(i).getLinePaint());
             new_legend_item.setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
             new_legend_collection.add(new_legend_item);
         }
@@ -105,75 +101,7 @@ public class chart_util {
                 new BufferedImage(image_base.getWidth(), image_base.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
         image.getGraphics().drawImage(image_base, 0, 0, null);
         ByteArrayOutputStream image_stream = new ByteArrayOutputStream();
-        ImageIO.write(image, segmentation_app.images_extension, image_stream);
-        return Imgcodecs.imdecode(
-                new MatOfByte(image_stream.toByteArray()),
-                Imgcodecs.IMREAD_UNCHANGED
-        );
-    }
-
-    public static Mat get_iterations_times_chart_image(
-            Map<Pair<center_init_method, segmentation_method>, Double[]> values,
-            String title
-    ) throws IOException {
-        XYSeriesCollection dataset = new XYSeriesCollection();
-        for (Pair<center_init_method, segmentation_method> pair : values.keySet()) {
-            XYSeries series = new XYSeries(pair.getKey() + " + " + pair.getValue());
-            for (int i = 0; i < values.get(pair).length; i++) {
-                series.add(i + 1, values.get(pair)[i]);
-            }
-            dataset.addSeries(series);
-        }
-        JFreeChart chart = ChartFactory.createXYLineChart(
-                title,
-                "Итерация алгоритма",
-                "Время в секундах",
-                dataset,
-                PlotOrientation.VERTICAL,
-                true,
-                true,
-                false
-        );
-
-
-        chart.getTitle().setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
-        XYPlot plot = chart.getXYPlot();
-        plot.getDomainAxis().setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
-        plot.getRangeAxis().setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
-        plot.getDomainAxis().setTickLabelFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
-        plot.getRangeAxis().setTickLabelFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
-        LegendItemCollection old_legend_collection = plot.getLegendItems();
-        LegendItemCollection new_legend_collection = new LegendItemCollection();
-        int idx = 0;
-        for (
-                LegendItem old_legend_item = old_legend_collection.get(idx);
-                old_legend_item != null;
-                old_legend_item = old_legend_collection.get(++idx)
-        ) {
-            LegendItem new_legend_item = new LegendItem(
-                    old_legend_item.getLabel(), old_legend_item.getDescription(),
-                    old_legend_item.getToolTipText(), old_legend_item.getURLText(),
-                    true, new Rectangle2D.Double(0, 0, 15, 15),
-                    true, old_legend_item.getFillPaint(),
-                    false, old_legend_item.getOutlinePaint(),
-                    old_legend_item.getOutlineStroke(), true,
-                    old_legend_item.getLine(), old_legend_item.getLineStroke(),
-                    old_legend_item.getLinePaint());
-            new_legend_item.setLabelFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-            new_legend_collection.add(new_legend_item);
-        }
-        plot.setFixedLegendItems(new_legend_collection);
-        for (int i = 0; i < dataset.getSeriesCount(); i++) {
-            plot.getRenderer().setSeriesStroke(i, new BasicStroke(8f));
-        }
-
-
-        BufferedImage image_base = chart.createBufferedImage(1000, 750);
-        BufferedImage image =
-                new BufferedImage(image_base.getWidth(), image_base.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
-        image.getGraphics().drawImage(image_base, 0, 0, null);
-        ByteArrayOutputStream image_stream = new ByteArrayOutputStream();
-        ImageIO.write(image, segmentation_app.images_extension, image_stream);
+        ImageIO.write(image, "png", image_stream);
         return Imgcodecs.imdecode(
                 new MatOfByte(image_stream.toByteArray()),
                 Imgcodecs.IMREAD_UNCHANGED

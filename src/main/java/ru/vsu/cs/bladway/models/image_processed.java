@@ -17,9 +17,11 @@ public class image_processed {
     @Column(name = "image_processed_id")
     private long imageProcessedId;
     @Lob
+    @Basic(fetch = FetchType.LAZY)
     @Column(name = "image_processed_labels", nullable = false)
     private byte[] imageProcessedLabels;
     @Lob
+    @Basic(fetch = FetchType.LAZY)
     @Column(name = "image_processed_segments", nullable = false)
     private byte[] imageProcessedSegments;
     @Column(name = "k_value", nullable = false)
@@ -48,7 +50,7 @@ public class image_processed {
 
     public image_processed(
             byte[] imageProcessedLabels,
-            byte[] image_processed_raw,
+            byte[] imageProcessedSegments,
             Integer k_value,
             Integer iteration_count,
             center_init_method center_init_method,
@@ -58,7 +60,7 @@ public class image_processed {
             List<Long> image_processing_times
     ) {
         this.imageProcessedLabels = imageProcessedLabels;
-        this.imageProcessedSegments = image_processed_raw;
+        this.imageProcessedSegments = imageProcessedSegments;
         this.kValue = k_value;
         this.iterationCount = iteration_count;
         this.centerInitMethod = center_init_method;

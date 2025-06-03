@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Segmentation App Manual processing</title>
+    <title>Segmentation App - Ручная обработка</title>
     <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
@@ -65,15 +65,16 @@
 <body>
 <div th:insert="~{fragments/header.html :: header}"></div>
 <div class="d-flex justify-content-center align-items-center min-vh-100 flex-column" id="body">
-    <h1 class="mb-4">Drop the image and choose segments to delete from image</h1>
-    <form action="/manual_segmentation" class="w-100 text-center align-items-center d-flex flex-column" enctype="multipart/form-data"
+    <h1 class="mb-4">Предоставьте изображение и выберите точки сегментов обрезки</h1>
+    <form action="/manual_segmentation" class="w-100 text-center align-items-center d-flex flex-column"
+          enctype="multipart/form-data"
           id="form" method="post">
         <input id="input-points" name="points" type="hidden"/>
         <label class="alert alert-info w-75 mx-auto mb-3" id="drop-zone">
             <input accept="image/*" hidden id="input-file" name="image" type="file"/>
             <div id="img-drop">
                 <img alt="" src="/img/drop.png">
-                <p>Drag and drop or click here to upload image...</p>
+                <p>Перетащите изображение или нажмите тут, чтобы его выбрать...</p>
             </div>
         </label>
         <div id="fullscreen-container">
@@ -81,8 +82,8 @@
                 <img alt="Uploaded Image" id="fullscreen-image" src=""/>
             </div>
             <div id="buttons-container">
-                <button class="btn btn-danger mr-2" id="clear-button" type="button">Clear</button>
-                <button class="btn btn-success ml-2" id="send-button" type="submit">Send</button>
+                <button class="btn btn-danger mr-2" id="clear-button" type="button">Очистить</button>
+                <button class="btn btn-success ml-2" id="send-button" type="submit">Отправить</button>
             </div>
         </div>
     </form>

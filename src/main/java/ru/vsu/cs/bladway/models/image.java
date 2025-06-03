@@ -15,11 +15,13 @@ public class image {
     @Column(name = "image_id")
     private long imageId;
     @Lob
-    @Column(name = "image_raw", nullable = false)
-    private byte[] imageRaw;
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "image", nullable = false)
+    private byte[] image;
     @Lob
-    @Column(name = "markup_raw")
-    private byte[] markupRaw;
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "image_markup")
+    private byte[] imageMarkup;
     @Column(name = "image_height", nullable = false)
     private int imageHeight;
     @Column(name = "image_width", nullable = false)
@@ -27,9 +29,9 @@ public class image {
     @OneToMany(mappedBy = "originalImage", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<image_processed> imagesProcessed;
 
-    public image(byte[] image_raw, byte[] markup_raw, int height, int width) {
-        this.imageRaw = image_raw;
-        this.markupRaw = markup_raw;
+    public image(byte[] image, byte[] image_markup, int height, int width) {
+        this.image = image;
+        this.imageMarkup = image_markup;
         this.imageHeight = height;
         this.imageWidth = width;
     }
