@@ -1,6 +1,7 @@
 package ru.vsu.cs.bladway;
 
 import nu.pattern.OpenCV;
+import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -11,6 +12,7 @@ import ru.vsu.cs.bladway.enums.center_init_method;
 import ru.vsu.cs.bladway.enums.segmentation_method;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -61,20 +63,21 @@ public class segmentation_app {
             new Scalar(255, 64, 255),
             new Scalar(255, 255, 64)
     };
-    private final static String dataset_path = System.getenv("SEGMENTATION_APP_DATASET_PATH");
-    public static boolean dataset_saved = false;
+    private final static String dataset_path_in_resources =
+            System.getenv("SEGMENTATION_APP_DATASET_PATH_IN_RESOURCES");
+    private final static String charts_path = System.getenv("SEGMENTATION_APP_CHARTS_PATH");
+    private final static String headless = System.getenv("SEGMENTATION_APP_HEADLESS");
+    public static boolean dataset_written = false;
+    public static boolean charts_written = false;
 
     public static void main(String[] args) throws IOException {
         OpenCV.loadLocally();
-        System.setProperty("java.awt.headless", "false");
+        System.setProperty("java.awt.headless", headless);
         segmentation_app_controller controller =
                 SpringApplication.run(segmentation_app.class, args).getBean(segmentation_app_controller.class);
 
-        var dataset = controller.save_dataset(
-                dataset_path,
-                images_dataset
-        );
-        dataset_saved = true;
+        var dataset = controller.write_dataset(dataset_path_in_resources, images_dataset);
+        dataset_written = true;
         /*controller.process_dataset(
                 dataset,
 				iteration_count,
@@ -85,8 +88,9 @@ public class segmentation_app {
 				k_max,
                 center_init_methods,
                 segmentation_methods
-		);
-        controller.show_charts_errors_by_iterations(
+		);*/
+        var charts_mats = new ArrayList<Mat>();
+        controller.add_charts_errors_by_iterations(
                 dataset,
 				iteration_count,
 				passage_count,
@@ -95,9 +99,10 @@ public class segmentation_app {
 				k_min,
 				k_max,
                 center_init_methods,
-                segmentation_methods
+                segmentation_methods,
+                charts_mats
 		);
-        controller.show_charts_errors_by_k(
+        controller.add_charts_errors_by_k(
                 dataset,
                 iteration_count,
                 passage_count,
@@ -106,9 +111,10 @@ public class segmentation_app {
                 k_min,
                 k_max,
                 center_init_methods,
-                segmentation_methods
+                segmentation_methods,
+                charts_mats
         );
-        controller.show_charts_times_by_iterations(
+        controller.add_charts_times_by_iterations(
                 dataset,
                 iteration_count,
                 passage_count,
@@ -117,9 +123,10 @@ public class segmentation_app {
                 k_min,
                 k_max,
                 center_init_methods,
-                segmentation_methods
+                segmentation_methods,
+                charts_mats
         );
-        controller.show_charts_times_by_k(
+        controller.add_charts_times_by_k(
                 dataset,
                 iteration_count,
                 passage_count,
@@ -128,8 +135,13 @@ public class segmentation_app {
                 k_min,
                 k_max,
                 center_init_methods,
-                segmentation_methods
-        );*/
+                segmentation_methods,
+                charts_mats
+        );
+        var charts = controller.write_charts(charts_mats);
+        charts_written = true;
+        if (!Boolean.parseBoolean(headless)) controller.show_charts(charts_mats);
+        controller.save_charts(charts_path, charts);
     }
 
 }

@@ -28,6 +28,8 @@ import ru.vsu.cs.bladway.repositories.image_repository;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
 
@@ -154,19 +156,16 @@ public class segmentation_app_controller {
         ));
     }
 
-    public List<image> save_dataset(
-            String dataset_path,
-            long images_dataset
-    ) throws IOException {
+    public List<image> write_dataset(String dataset_path, long images_dataset) throws IOException {
         List<image> images = new ArrayList<>();
         for (long c = 1; c <= images_dataset; c++) {
             image image = image_repository.findById(c).orElse(null);
             if (image == null) {
                 images.add(write_image(
                         ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(
-                                dataset_path + c + "." + images_extension))),
+                                "/" + dataset_path + c + "." + images_extension))),
                         ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(
-                                dataset_path + c + "_markup." + images_extension)))
+                                "/" + dataset_path + c + "_markup." + images_extension)))
                 ));
             } else images.add(image);
         }
@@ -229,15 +228,15 @@ public class segmentation_app_controller {
 
                             // Сохраняем результат сегментации
                             write_image_processed(
-                                    output.centers_labels,
-                                    output_image_mat,
-                                    k,
-                                    iteration_count,
-                                    ci_method,
-                                    seg_method,
-                                    input_image,
-                                    output.iteration_errors,
-                                    output.processing_times
+                                output.centers_labels,
+                                output_image_mat,
+                                k,
+                                iteration_count,
+                                ci_method,
+                                seg_method,
+                                input_image,
+                                output.iteration_errors,
+                                output.processing_times
                             );
                         }
                     }
@@ -246,7 +245,7 @@ public class segmentation_app_controller {
         }
     }
 
-    public void show_charts_errors_by_iterations(
+    public void add_charts_errors_by_iterations(
             List<image> dataset,
             int iteration_count,
             int passage_count,
@@ -255,12 +254,13 @@ public class segmentation_app_controller {
             int k_min,
             int k_max,
             List<center_init_method> center_init_methods,
-            List<segmentation_method> segmentation_methods
+            List<segmentation_method> segmentation_methods,
+            List<Mat> charts
     ) throws IOException {
         for (int c = images_dataset_min; c <= images_dataset_max; c++) {
             for (int k = k_min; k <= k_max; k++) {
                 image original_image = dataset.get(c);
-                Map<Pair<center_init_method, segmentation_method>, Double[][]> error_data = new HashMap<>();
+                Map<Pair<center_init_method, segmentation_method>, Double[][]> error_data = new TreeMap<>();
                 for (center_init_method ci_method : center_init_methods) {
                     for (segmentation_method seg_method : segmentation_methods) {
                         Double[][] error_rates = new Double[2][iteration_count];
@@ -282,19 +282,19 @@ public class segmentation_app_controller {
                     }
                 }
                 String error_title = "Процесс обучения алгоритма." +
-                        " Фото N = " + c
+                        " Фото N = " + (c + 1)
                         + ". K = " + k;
                 Mat error_chart_image = get_ci_seg_methods_xy_chart_image(error_data,
                         error_title,
                         "Итерация алгоритма",
                         "Величина ошибки"
                 );
-                show_image(error_chart_image, error_title);
+                charts.add(error_chart_image);
             }
         }
     }
 
-    public void show_charts_errors_by_k(
+    public void add_charts_errors_by_k(
             List<image> dataset,
             int iteration_count,
             int passage_count,
@@ -303,11 +303,12 @@ public class segmentation_app_controller {
             int k_min,
             int k_max,
             List<center_init_method> center_init_methods,
-            List<segmentation_method> segmentation_methods
+            List<segmentation_method> segmentation_methods,
+            List<Mat> charts
     ) throws IOException {
         for (int c = images_dataset_min; c <= images_dataset_max; c++) {
             image original_image = dataset.get(c);
-            Map<Pair<center_init_method, segmentation_method>, Double[][]> error_data = new HashMap<>();
+            Map<Pair<center_init_method, segmentation_method>, Double[][]> error_data = new TreeMap<>();
             for (center_init_method ci_method : center_init_methods) {
                 for (segmentation_method seg_method : segmentation_methods) {
                     Double[][] error_rates = new Double[2][k_max - k_min + 1];
@@ -329,7 +330,7 @@ public class segmentation_app_controller {
                 }
             }
             String error_title = "Величина ошибки при разных значениях числа сегментов." +
-                    " Фото N = " + c
+                    " Фото N = " + (c + 1)
                     + ". Количество итераций = " + iteration_count;
             Mat error_chart_image = get_ci_seg_methods_xy_chart_image(
                     error_data,
@@ -337,11 +338,11 @@ public class segmentation_app_controller {
                     "Величина K",
                     "Величина ошибки"
             );
-            show_image(error_chart_image, error_title);
+            charts.add(error_chart_image);
         }
     }
 
-    public void show_charts_times_by_iterations(
+    public void add_charts_times_by_iterations(
             List<image> dataset,
             int iteration_count,
             int passage_count,
@@ -350,12 +351,13 @@ public class segmentation_app_controller {
             int k_min,
             int k_max,
             List<center_init_method> center_init_methods,
-            List<segmentation_method> segmentation_methods
+            List<segmentation_method> segmentation_methods,
+            List<Mat> charts
     ) throws IOException {
         for (int c = images_dataset_min; c <= images_dataset_max; c++) {
             for (int k = k_min; k <= k_max; k++) {
                 image original_image = dataset.get(c);
-                Map<Pair<center_init_method, segmentation_method>, Double[][]> time_data = new HashMap<>();
+                Map<Pair<center_init_method, segmentation_method>, Double[][]> time_data = new TreeMap<>();
                 for (center_init_method ci_method : center_init_methods) {
                     for (segmentation_method seg_method : segmentation_methods) {
                         Double[][] times = new Double[2][iteration_count];
@@ -366,7 +368,7 @@ public class segmentation_app_controller {
                                         original_image,
                                         ci_method,
                                         seg_method);
-                        for (int i = 0; i < times.length; i++) {
+                        for (int i = 0; i < iteration_count; i++) {
                             times[0][i] = (double) (i + 1);
                             for (int p = 0; p < passage_count; p++) {
                                 times[1][i] += images_processed.get(p).getImageProcessingTimes().get(i);
@@ -378,7 +380,7 @@ public class segmentation_app_controller {
                     }
                 }
                 String time_title = "Общее время затраченное на число итераций." +
-                        " Фото N = " + c
+                        " Фото N = " + (c + 1)
                         + ", высота = " + original_image.getImageHeight()
                         + ", ширина = " + original_image.getImageWidth()
                         + ". K = " + k;
@@ -388,12 +390,12 @@ public class segmentation_app_controller {
                         "Итерация алгоритма",
                         "Время в секундах"
                 );
-                show_image(time_chart_image, time_title);
+                charts.add(time_chart_image);
             }
         }
     }
 
-    public void show_charts_times_by_k(
+    public void add_charts_times_by_k(
             List<image> dataset,
             int iteration_count,
             int passage_count,
@@ -402,11 +404,12 @@ public class segmentation_app_controller {
             int k_min,
             int k_max,
             List<center_init_method> center_init_methods,
-            List<segmentation_method> segmentation_methods
+            List<segmentation_method> segmentation_methods,
+            List<Mat> charts
     ) throws IOException {
         for (int c = images_dataset_min; c <= images_dataset_max; c++) {
             image original_image = dataset.get(c);
-            Map<Pair<center_init_method, segmentation_method>, Double[][]> time_data = new HashMap<>();
+            Map<Pair<center_init_method, segmentation_method>, Double[][]> time_data = new TreeMap<>();
             for (center_init_method ci_method : center_init_methods) {
                 for (segmentation_method seg_method : segmentation_methods) {
                     Double[][] times = new Double[2][k_max - k_min + 1];
@@ -429,7 +432,7 @@ public class segmentation_app_controller {
                 }
             }
             String time_title = "Общее время работы при разных значениях числа сегментов." +
-                    " Фото N = " + c
+                    " Фото N = " + (c + 1)
                     + ", высота = " + original_image.getImageHeight()
                     + ", ширина = " + original_image.getImageWidth()
                     + ". Количество итераций = " + iteration_count;
@@ -439,7 +442,40 @@ public class segmentation_app_controller {
                     "Величина K",
                     "Время в секундах"
             );
-            show_image(time_chart_image, time_title);
+            charts.add(time_chart_image);
+        }
+    }
+
+    public void show_charts(List<Mat> charts) {
+        for (Mat chart : charts) {
+            show_image(chart, "");
+        }
+    }
+
+    public List<image> write_charts(List<Mat> charts) {
+        List<image> images = new ArrayList<>();
+        for (long c = images_dataset + 1; c <= images_dataset + charts.size(); c++) {
+            image image = image_repository.findById(c).orElse(null);
+            if (image == null) {
+                images.add(write_image(
+                        charts.get((int) (c - images_dataset - 1L)),
+                        null
+                ));
+            } else images.add(image);
+        }
+        return images;
+    }
+
+    public void save_charts(String charts_path, List<image> charts) throws IOException {
+        File dir = new File(charts_path);
+        dir.mkdirs();
+        for (int i = 0; i < charts.size(); i++) {
+            byte[] chart_byte = charts.get(i).getImage();
+            try (FileOutputStream fos =
+                         new FileOutputStream(
+                                 charts_path + String.format("%02d", i + 1) + "." + images_extension)) {
+                fos.write(chart_byte);
+            }
         }
     }
 
@@ -468,7 +504,7 @@ public class segmentation_app_controller {
             Model model,
             @RequestParam("images") List<MultipartFile> images
     ) throws IOException {
-        if (!dataset_saved) return "auto_segmentation_get";
+        if (!dataset_written || !charts_written) return "auto_segmentation_get";
         List<List<String>> images_processed_base64 = new ArrayList<>();
         for (int m = 0; m < images.size(); m++) {
             images_processed_base64.add(new ArrayList<>());
@@ -526,7 +562,7 @@ public class segmentation_app_controller {
             @RequestParam("image") MultipartFile image,
             @RequestParam("points") String pointsJSON
     ) throws IOException {
-        if (!dataset_saved) return "manual_segmentation_get";
+        if (!dataset_written || !charts_written) return "manual_segmentation_get";
         ObjectMapper mapper = new ObjectMapper();
         List<point> points = mapper.readValue(pointsJSON, new TypeReference<List<point>>() {
         });

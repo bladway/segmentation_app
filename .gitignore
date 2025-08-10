@@ -4,6 +4,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 src/main/resources/dataset/
+src/main/resources/charts/
 develop.env
 deploy.env
 *.log*

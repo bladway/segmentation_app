@@ -13,7 +13,8 @@ import java.util.List;
 @Data
 public class image_processed {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "image_processed_generator")
+    @SequenceGenerator(name = "image_processed_generator", sequenceName = "image_processed_seq", allocationSize = 1)
     @Column(name = "image_processed_id")
     private long imageProcessedId;
     @Lob

@@ -11,7 +11,8 @@ import java.util.List;
 @Data
 public class image {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "image_generator")
+    @SequenceGenerator(name = "image_generator", sequenceName = "image_seq", allocationSize = 1)
     @Column(name = "image_id")
     private long imageId;
     @Lob
