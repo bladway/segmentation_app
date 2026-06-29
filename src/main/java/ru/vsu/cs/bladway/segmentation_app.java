@@ -76,72 +76,74 @@ public class segmentation_app {
         segmentation_app_controller controller =
                 SpringApplication.run(segmentation_app.class, args).getBean(segmentation_app_controller.class);
 
-        var dataset = controller.write_dataset(dataset_path_in_resources, images_dataset);
-        dataset_written = true;
-        /*controller.process_dataset(
-                dataset,
-				iteration_count,
-				passage_count,
-				images_dataset_min,
-				images_dataset_max,
-				k_min,
-				k_max,
-                center_init_methods,
-                segmentation_methods
-		);*/
-        var charts_mats = new ArrayList<Mat>();
-        controller.add_charts_errors_by_iterations(
-                dataset,
-				iteration_count,
-				passage_count,
-				images_dataset_min,
-				images_dataset_max,
-				k_min,
-				k_max,
-                center_init_methods,
-                segmentation_methods,
-                charts_mats
-		);
-        controller.add_charts_errors_by_k(
-                dataset,
-                iteration_count,
-                passage_count,
-                images_dataset_min,
-                images_dataset_max,
-                k_min,
-                k_max,
-                center_init_methods,
-                segmentation_methods,
-                charts_mats
-        );
-        controller.add_charts_times_by_iterations(
-                dataset,
-                iteration_count,
-                passage_count,
-                images_dataset_min,
-                images_dataset_max,
-                k_min,
-                k_max,
-                center_init_methods,
-                segmentation_methods,
-                charts_mats
-        );
-        controller.add_charts_times_by_k(
-                dataset,
-                iteration_count,
-                passage_count,
-                images_dataset_min,
-                images_dataset_max,
-                k_min,
-                k_max,
-                center_init_methods,
-                segmentation_methods,
-                charts_mats
-        );
-        var charts = controller.write_charts(charts_mats);
-        charts_written = true;
-        if (!Boolean.parseBoolean(headless)) controller.show_charts(charts_mats);
-        controller.save_charts(charts_path, charts);
+        if (!dataset_path_in_resources.isEmpty()) {
+            var dataset = controller.write_dataset(dataset_path_in_resources, images_dataset);
+            dataset_written = true;
+            controller.process_dataset(
+                    dataset,
+                    iteration_count,
+                    passage_count,
+                    images_dataset_min,
+                    images_dataset_max,
+                    k_min,
+                    k_max,
+                    center_init_methods,
+                    segmentation_methods
+            );
+            var charts_mats = new ArrayList<Mat>();
+            controller.add_charts_errors_by_iterations(
+                    dataset,
+                    iteration_count,
+                    passage_count,
+                    images_dataset_min,
+                    images_dataset_max,
+                    k_min,
+                    k_max,
+                    center_init_methods,
+                    segmentation_methods,
+                    charts_mats
+            );
+            controller.add_charts_errors_by_k(
+                    dataset,
+                    iteration_count,
+                    passage_count,
+                    images_dataset_min,
+                    images_dataset_max,
+                    k_min,
+                    k_max,
+                    center_init_methods,
+                    segmentation_methods,
+                    charts_mats
+            );
+            controller.add_charts_times_by_iterations(
+                    dataset,
+                    iteration_count,
+                    passage_count,
+                    images_dataset_min,
+                    images_dataset_max,
+                    k_min,
+                    k_max,
+                    center_init_methods,
+                    segmentation_methods,
+                    charts_mats
+            );
+            controller.add_charts_times_by_k(
+                    dataset,
+                    iteration_count,
+                    passage_count,
+                    images_dataset_min,
+                    images_dataset_max,
+                    k_min,
+                    k_max,
+                    center_init_methods,
+                    segmentation_methods,
+                    charts_mats
+            );
+            var charts = controller.write_charts(charts_mats);
+            charts_written = true;
+            if (!Boolean.parseBoolean(headless)) controller.show_charts(charts_mats);
+            controller.save_charts(charts_path, charts);
+        }
     }
 
 }
